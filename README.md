@@ -1,105 +1,133 @@
-# VWP2GoM - Vanilla Weapons Plus to Guns of Marz
+# VWP2GoM
 
-Moves an existing Build 42 save from **Vanilla Weapons Plus - Gunworks Edition**
-(`MarzVanillaGuns`) to **Guns of Marz** (`GunsOfMarz`) without losing anything. It converts every
-gun, magazine, attachment, round, box and carton, including ones in places you have not visited
-yet.
+Converts a save that uses **Vanilla Weapons Plus - Gunworks Edition** into one that uses **Guns of
+Marz**. All the Vanilla Weapons Plus guns, magazines, attachments and ammo in the save become their
+Guns of Marz equivalents.
 
-## What it converts
+> **Warning:** Vanilla Weapons Plus items are deleted from a save the first time it loads with
+> neither **Vanilla Weapons Plus - Gunworks Edition** nor **VWP2GoM Placeholders** enabled. Once
+> the game saves, they cannot be recovered.
 
-- **Guns** become their Guns of Marz counterpart, for example the M9 to the M92FS, the M4 to the
-  M4A1 and the AK-47 to the AK47. Guns with no counterpart become the Guns of Marz gun with the
-  closest stats:
-  - Glock 17 → M92FS
-  - .44 Desert Eagle → S&W 629
-  - SR-25 → PSG1
-  - sawn-off pump → Remington 870
-  - JS-556 → M16A3
-  - JS5 → MP5
+## Before you start
 
-  Vanilla revolvers, which Vanilla Weapons Plus never changed, reroll to a random Guns of Marz
-  handgun of the same caliber: Python, Rhino, MP412 or Detective .38 for .357/.38, and the S&W
-  629 for .44.
+Subscribe to these on the Steam Workshop:
 
-  The full list is in [docs/mapping.md](docs/mapping.md).
-- **The gun keeps its state:**
-  - rounds in the magazine and in the chamber, including which ammo they are
-  - jams, spent shells and fire mode
-  - condition (as the same share of its maximum), repairs, custom name and favourite
-  - where it was: hands, back, holster or hotbar slot, container, or the floor
-  - other mods' data stored on the gun
-- **Attachments are refitted** as the Guns of Marz part that does the same job, with any rail or
-  muzzle mount it needs. A part that cannot fit the new gun is put next to the gun instead.
-- **Magazines** become the matching Guns of Marz magazine with their rounds.
-- **Ammo** (loose rounds, boxes and cartons, for every caliber) becomes Guns of Marz ammo. Round
-  counts match exactly. .44 boxes and cartons are repacked, because a Guns of Marz .44 box holds
-  25 rounds rather than 20.
+| Name in the mod list | Mod ID | Workshop ID |
+|---|---|---|
+| Gunworks-gang | `SWMG` | 3722064198 |
+| Guns of Marz | `GunsOfMarz` | 3722134990 |
+| VWP2GoM - Vanilla Weapons Plus to Guns of Marz | `VWP2GoM` | *(this item)* |
+| VWP2GoM Placeholders | `VWP2GoM_Placeholders` | *(this item)* |
 
-**Nothing is thrown away.** Rounds that no longer fit, a magazine a revolver cannot take, or an
-attachment with nowhere to go are placed beside the converted gun.
+The Guns of Marz Workshop item also contains **Guns of Marz (Old Version)**. Don't enable that
+one.
 
-## The two mods
+## Single player
 
-| Mod | Enable when |
+1. Quit the game.
+2. Back up the save: copy its folder from `Zomboid/Saves/<game mode>/<save name>/` (for example
+   `Zomboid/Saves/Apocalypse/MySave/`) to somewhere outside `Zomboid`.
+3. Start the game without the `-debug` launch option.
+4. On the main menu click **LOAD**.
+5. Select the save, click **MORE...**, then click **Choose Mods...**.
+6. Disable **Vanilla Weapons Plus - Gunworks Edition**.
+7. Enable **Gunworks-gang**, **Guns of Marz**, **VWP2GoM - Vanilla Weapons Plus to Guns of Marz**
+   and **VWP2GoM Placeholders**.
+8. Click **ACCEPT**, then **PLAY**.
+9. After the game has loaded, open `Zomboid/Lua/VWP2GoM.log` and search it for `FAILED` (see
+   [The log](#the-log)).
+10. Keep all four mods enabled for this save from now on.
+
+## Dedicated server
+
+1. Stop the server.
+2. Back up the world: copy `Zomboid/Saves/Multiplayer/<server name>/` to somewhere outside
+   `Zomboid`. It includes `players.db`, which holds every player's inventory.
+3. Open `Zomboid/Server/<server name>.ini`.
+4. Edit the `Mods=` line:
+   - Remove `MarzVanillaGuns`.
+   - Add `SWMG`, `GunsOfMarz`, `VWP2GoM` and `VWP2GoM_Placeholders` if they're not already
+     there.
+   - Separate IDs with `;`. A leading `\` on an ID is allowed, so `\SWMG` and `SWMG` work the
+     same.
+
+   ```
+   Mods=SWMG;GunsOfMarz;VWP2GoM;VWP2GoM_Placeholders
+   ```
+5. Edit the `WorkshopItems=` line:
+   - Remove `3773834525` (Vanilla Weapons Plus).
+   - Add `3722064198`, `3722134990` and this item's Workshop ID.
+   - Separate IDs with `;`.
+6. Start the server. Players download the new mods automatically when they join.
+7. Open `Zomboid/Lua/VWP2GoM.log` on the server machine and search it for `FAILED`.
+8. Keep all four mods in the server's mod list from now on.
+
+## Why the mods must stay enabled
+
+VWP2GoM converts items when the game loads them:
+
+| Where | Converted when |
 |---|---|
-| **VWP2GoM** | For the migration, and for as long as unconverted areas may remain |
-| **VWP2GoM Placeholders** | Only once Vanilla Weapons Plus is disabled, **in the same load** |
+| Your inventory | You load the save or join the server |
+| Everything else in the world | That area first loads |
 
-Without a definition, the game deletes an item from the save the moment it loads. The
-placeholders keep every Vanilla Weapons Plus item in existence until VWP2GoM gets to it. They
-cannot be active alongside Vanilla Weapons Plus; the mod manager enforces that.
+Areas nobody has visited since the switch still hold Vanilla Weapons Plus items. VWP2GoM
+Placeholders stops those items being deleted until they are converted. If you disable either
+VWP2GoM mod, they are lost the next time those areas load.
 
-## How to migrate
+## What each item becomes
 
-1. **Back up the save.** Copy the whole folder under `Zomboid/Saves/`.
-2. *(Optional, safest)* Load once with **Vanilla Weapons Plus + Guns of Marz + VWP2GoM**
-   enabled. Your inventory and every area that loads is converted using Vanilla Weapons Plus's
-   real item definitions. Save and quit.
-3. In the mod manager: disable **Vanilla Weapons Plus**, and enable **Guns of Marz**,
-   **VWP2GoM** and **VWP2GoM Placeholders**. Load the save.
-   - Do not launch with `-debug` for this load. In debug mode the game treats a size mismatch in
-     a saved item as fatal.
-4. Check `Zomboid/Lua/VWP2GoM.log`. Every conversion is one line. Any line starting with
-   `FAILED` left that item unchanged; it is retried the next time that area loads.
-5. **Keep both VWP2GoM mods enabled.** Areas you have not visited still hold the old items and are
-   converted when they first load. Removing the placeholders deletes those items.
+| Item | Becomes |
+|---|---|
+| Vanilla Weapons Plus gun | The Guns of Marz version: M9 → M92FS, M4 → M4A1, AK-47 → AK47, MP5 → MP5, and so on |
+| Gun that Guns of Marz doesn't have | The Guns of Marz gun with the closest stats: Glock 17 → M92FS, .44 Desert Eagle → S&W 629, SR-25 → PSG1, sawn-off pump shotgun → Remington 870, JS-556 → M16A3, JS5 → MP5 |
+| Vanilla revolver | A random Guns of Marz revolver of the same caliber |
+| Magazine | The matching Guns of Marz magazine, with the same rounds in it |
+| Attachment | The Guns of Marz attachment that does the same job, mounted with any rail it needs |
+| Rounds, boxes, cartons | Guns of Marz rounds, boxes and cartons with the same total number of rounds |
 
-### Multiplayer
+A converted gun keeps:
 
-- Install both mods on the server and on every client.
-- The conversion runs on the server. Players on the server see the converted items in their
-  inventory, hands, back and hotbar without relogging.
-- Players who log in later are converted when they join, and every in-game minute as a fallback.
-- Items in areas nobody has loaded are converted when the server first loads that area, before it
-  sends the area to anyone.
-- Test on a server with two clients before migrating a live server: one client holding and
-  wearing old guns, the other standing nearby to check that guns on backs and in hands update for
-  both.
+- the rounds in its magazine and chamber
+- its condition and repair count
+- its custom name and favourite mark
+- its location: hands, back, holster, hotbar slot, bag, container, vehicle or floor
 
-## Guns of Marz's vanilla replacement
+If something no longer fits the new gun, it is placed next to the gun rather than deleted:
+- rounds beyond the new magazine's capacity
+- a magazine the new gun can't use
+- an attachment that has no mount on the new gun
 
-If the Guns of Marz sandbox options that replace vanilla guns, attachments or ammo are on, Guns of
-Marz also swaps vanilla items for random new ones, and it would do so to items loaded from your
-save. While VWP2GoM is enabled, that only happens to **newly generated loot**. Your existing items
-are converted by the fixed mapping instead.
+The full list is in [docs/mapping.md](docs/mapping.md).
 
-## Test before trusting it with your save
+## The log
 
-The conversion was checked offline against the real item scripts and the Gunworks framework (see
-[docs/implementation.md](docs/implementation.md)), but not in the game. On a copy of your save,
-before the real migration:
+VWP2GoM writes one line to `Zomboid/Lua/VWP2GoM.log` for each item it converts:
 
-- A Glock with a silencer, laser and loaded magazine in your hands
-- An AK-47 with a 75-round drum on your back
-- A loose Assault Rifle Silencer and a 7.62x39 box on the floor
-- A double barrel in a car trunk
-- A .44 carton in a crate in an area you have not loaded since
+```
+Base.PistolGlock [cond 7/10, ammo 12+1, mag] -> MarzGuns.M92FS [cond 7/10, ammo 12+1, mag] | none on Player
+```
 
-Then run steps 3 and 4 and check each item, the log, and that the guns fire and reload.
+That line reads: a Glock at condition 7 of 10, with 12 rounds in its magazine and 1 in the
+chamber, became an M92FS with the same, in the player's inventory.
 
-## Documentation
+A line starting with `FAILED` means that item was left unchanged. VWP2GoM tries it again the next
+time that area loads or that player joins. If the same item keeps failing, report the line along
+with `Zomboid/console.txt`.
 
-- [docs/research.md](docs/research.md): how Build 42 saves and loads items, read from the game's
-  code
-- [docs/mapping.md](docs/mapping.md): every item, and what it becomes and why
-- [docs/implementation.md](docs/implementation.md): how the migration works
+## FAQ
+
+**Can I disable VWP2GoM once everything looks converted?**
+Only if nobody will ever load an area that hasn't been visited since the switch. On a save you
+keep playing, leave both VWP2GoM mods enabled.
+
+**Why are new guns I find random?**
+Guns of Marz's sandbox options replace newly spawned vanilla weapons with random Guns of Marz ones.
+VWP2GoM leaves new loot to Guns of Marz and only converts items that were already in the save.
+
+## For developers
+
+- [docs/research.md](docs/research.md): how Build 42 saves, loads and syncs items
+- [docs/mapping.md](docs/mapping.md): what every item becomes and why
+- [docs/implementation.md](docs/implementation.md): how the converter works
+- `uv run --with lupa python3 tests/run_tests.py`: offline tests
