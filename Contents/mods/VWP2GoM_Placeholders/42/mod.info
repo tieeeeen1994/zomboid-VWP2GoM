@@ -1,0 +1,9 @@
+name=VWP2GoM Placeholders
+id=VWP2GoM_Placeholders
+description=Stand-in item definitions for every Vanilla Weapons Plus (Gunworks Edition) item, so a save loaded without that mod keeps those items until VWP2GoM converts them. Only enable this once Vanilla Weapons Plus is disabled, and enable it in the same load.
+author=Tien
+modversion=1.0.0
+require=VWP2GoM
+incompatible=MarzVanillaGuns
+loadModAfter=SWMG,GunsOfMarz,VWP2GoM
+category=Weapons

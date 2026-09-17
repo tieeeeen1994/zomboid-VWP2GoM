@@ -1,0 +1,651 @@
+module Base
+{
+    item 308Clip_10
+    {
+        DisplayName     = 7.62x51mm 10-Round Magazine (VWP2GoM),
+        DisplayCategory = Ammo,
+        Weight          = 0.2,
+        Icon            = m14clip,
+        ItemType        = base:weaponpart,
+        PartType        = Clip,
+        MaxAmmo         = 10,
+        AmmoType        = base:bullets_308,
+        CanStack        = false,
+    }
+
+    item 308Clip_20
+    {
+        DisplayName     = 7.62x51mm 20-Round Magazine (VWP2GoM),
+        DisplayCategory = Ammo,
+        Weight          = 0.4,
+        Icon            = m14clip,
+        ItemType        = base:weaponpart,
+        PartType        = Clip,
+        MaxAmmo         = 20,
+        AmmoType        = base:bullets_308,
+        CanStack        = false,
+    }
+
+    item 44Clip
+    {
+        ItemType = base:weaponpart,
+        PartType = Clip,
+    }
+
+    item 45Clip
+    {
+        ItemType = base:weaponpart,
+        PartType = Clip,
+    }
+
+    item 556Clip
+    {
+        ItemType = base:weaponpart,
+        PartType = Clip,
+    }
+
+    item 556Clip_20
+    {
+        DisplayName     = 5.56mm 20-Round Magazine (VWP2GoM),
+        DisplayCategory = Ammo,
+        Weight          = 0.05,
+        Icon            = m16clip,
+        ItemType        = base:weaponpart,
+        PartType        = Clip,
+        MaxAmmo         = 20,
+        AmmoType        = base:bullets_556,
+        CanStack        = false,
+    }
+
+    item 556Clip_75
+    {
+        DisplayName     = 5.56mm 75-Round Magazine (VWP2GoM),
+        DisplayCategory = Ammo,
+        Weight          = 1.0,
+        Icon            = m16clip,
+        ItemType        = base:weaponpart,
+        PartType        = Clip,
+        MaxAmmo         = 75,
+        AmmoType        = base:bullets_556,
+        CanStack        = false,
+    }
+
+    item 556Muzzle
+    {
+        DisplayName     = 5.56x45mm Rifle Muzzle (VWP2GoM),
+        DisplayCategory = WeaponPart,
+        Weight          = 0.3,
+        Icon            = ShotgunChoke,
+        ItemType        = base:weaponpart,
+        PartType        = Muzzle,
+    }
+
+    item 762Box
+    {
+        DisplayName     = Box of 7.62x39mm Rounds (VWP2GoM),
+        DisplayCategory = Ammo,
+        Weight          = 0.5,
+        Icon            = RifleAmmo308,
+        ItemType        = base:normal,
+    }
+
+    item 762Bullets
+    {
+        DisplayName     = 7.62x39mm Round (VWP2GoM),
+        DisplayCategory = Ammo,
+        Weight          = 0.037,
+        Icon            = RifleAmmo308loose,
+        ItemType        = base:normal,
+        Count           = 5,
+    }
+
+    item 762Carton
+    {
+        DisplayName     = Carton of 7.62x39mm Rounds (VWP2GoM),
+        DisplayCategory = Ammo,
+        Weight          = 5.0,
+        Icon            = Parcel_Medium_Military,
+        ItemType        = base:normal,
+    }
+
+    item 762Clip_30
+    {
+        DisplayName     = 7.62x39mm 30-Round Magazine (VWP2GoM),
+        DisplayCategory = Ammo,
+        Weight          = 0.4,
+        Icon            = m16clip,
+        ItemType        = base:weaponpart,
+        PartType        = Clip,
+        MaxAmmo         = 30,
+        AmmoType        = swmg:bullet_762x39,
+        CanStack        = false,
+    }
+
+    item 762Clip_75
+    {
+        DisplayName     = 7.62x39mm 75-Round Magazine (VWP2GoM),
+        DisplayCategory = Ammo,
+        Weight          = 1.0,
+        Icon            = m16clip,
+        ItemType        = base:weaponpart,
+        PartType        = Clip,
+        MaxAmmo         = 75,
+        AmmoType        = swmg:bullet_762x39,
+        CanStack        = false,
+    }
+
+    item 762Muzzle
+    {
+        DisplayName     = 7.62x39mm Rifle Muzzle (VWP2GoM),
+        DisplayCategory = WeaponPart,
+        Weight          = 0.3,
+        Icon            = ShotgunChoke,
+        ItemType        = base:weaponpart,
+        PartType        = Muzzle,
+    }
+
+    item 9mmClip
+    {
+        ItemType = base:weaponpart,
+        PartType = Clip,
+    }
+
+    item 9mmClip_100
+    {
+        DisplayName     = 9mm 100-Round Magazine (VWP2GoM),
+        DisplayCategory = Ammo,
+        Weight          = 0.2,
+        Icon            = BerettaClip,
+        ItemType        = base:weaponpart,
+        PartType        = Clip,
+        MaxAmmo         = 100,
+        AmmoType        = base:bullets_9mm,
+        CanStack        = false,
+    }
+
+    item 9mmClip_25
+    {
+        DisplayName     = 9mm 25-Round Magazine (VWP2GoM),
+        DisplayCategory = Ammo,
+        Weight          = 0.2,
+        Icon            = BerettaClip,
+        ItemType        = base:weaponpart,
+        PartType        = Clip,
+        MaxAmmo         = 25,
+        AmmoType        = base:bullets_9mm,
+        CanStack        = false,
+    }
+
+    item 9mmClip_30
+    {
+        DisplayName     = 9mm 30-Round Magazine (VWP2GoM),
+        DisplayCategory = Ammo,
+        Weight          = 0.2,
+        Icon            = BerettaClip,
+        ItemType        = base:weaponpart,
+        PartType        = Clip,
+        MaxAmmo         = 30,
+        AmmoType        = base:bullets_9mm,
+        CanStack        = false,
+    }
+
+    item 9mmClip_40
+    {
+        DisplayName     = 9mm 40-Round Magazine (VWP2GoM),
+        DisplayCategory = Ammo,
+        Weight          = 0.2,
+        Icon            = BerettaClip,
+        ItemType        = base:weaponpart,
+        PartType        = Clip,
+        MaxAmmo         = 40,
+        AmmoType        = base:bullets_9mm,
+        CanStack        = false,
+    }
+
+    item AC556
+    {
+        DisplayName               = JS-556 Rifle (VWP2GoM),
+        DisplayCategory           = Weapon,
+        Weight                    = 3.2,
+        Icon                      = AssaultRifle,
+        ItemType                  = base:weapon,
+        MagazineType              = Base.JS14_Clip,
+        ConditionMax              = 10,
+        MaxAmmo                   = 30,
+        AmmoType                  = base:bullets_556,
+        FireMode                  = Auto,
+        FireModePossibilities     = Auto/Single,
+        AttachmentType            = Rifle,
+        WeaponReloadType          = boltaction,
+        Ranged                    = true,
+        SubCategory               = Firearm,
+        IsAimedFirearm            = true,
+        TwoHandWeapon             = true,
+        RequiresEquippedBothHands = true,
+    }
+
+    item AR_Silencer
+    {
+        DisplayName     = Assault Rifle Silencer (VWP2GoM),
+        DisplayCategory = WeaponPart,
+        Weight          = 1.0,
+        Icon            = HandgunLaser,
+        ItemType        = base:weaponpart,
+        PartType        = Muzzle,
+    }
+
+    item AssaultRifle
+    {
+        FireMode              = Burst,
+        FireModePossibilities = Burst/Single,
+    }
+
+    item AssaultRifleA3
+    {
+        DisplayName               = M16A3 Assault Rifle (VWP2GoM),
+        DisplayCategory           = Weapon,
+        Weight                    = 4.0,
+        Icon                      = AssaultRifle,
+        ItemType                  = base:weapon,
+        MagazineType              = Base.556Clip,
+        ConditionMax              = 10,
+        MaxAmmo                   = 30,
+        AmmoType                  = base:bullets_556,
+        FireMode                  = Auto,
+        FireModePossibilities     = Auto/Single,
+        AttachmentType            = Rifle,
+        WeaponReloadType          = boltaction,
+        Ranged                    = true,
+        SubCategory               = Firearm,
+        IsAimedFirearm            = true,
+        TwoHandWeapon             = true,
+        RequiresEquippedBothHands = true,
+    }
+
+    item AssaultRifleAK47
+    {
+        DisplayName               = AK-47 Assault Rifle (VWP2GoM),
+        DisplayCategory           = Weapon,
+        Weight                    = 4.0,
+        Icon                      = AssaultRifle,
+        ItemType                  = base:weapon,
+        MagazineType              = Base.762Clip_30,
+        ConditionMax              = 10,
+        MaxAmmo                   = 30,
+        AmmoType                  = swmg:bullet_762x39,
+        FireMode                  = Auto,
+        FireModePossibilities     = Auto/Single,
+        AttachmentType            = Rifle,
+        WeaponReloadType          = boltaction,
+        Ranged                    = true,
+        SubCategory               = Firearm,
+        IsAimedFirearm            = true,
+        TwoHandWeapon             = true,
+        RequiresEquippedBothHands = true,
+    }
+
+    item AssaultRifleM4
+    {
+        DisplayName               = M4 Carbine (VWP2GoM),
+        DisplayCategory           = Weapon,
+        Weight                    = 3.2,
+        Icon                      = AssaultRifle,
+        ItemType                  = base:weapon,
+        MagazineType              = Base.556Clip,
+        ConditionMax              = 10,
+        MaxAmmo                   = 30,
+        AmmoType                  = base:bullets_556,
+        FireMode                  = Auto,
+        FireModePossibilities     = Auto/Single,
+        AttachmentType            = Rifle,
+        WeaponReloadType          = boltaction,
+        Ranged                    = true,
+        SubCategory               = Firearm,
+        IsAimedFirearm            = true,
+        TwoHandWeapon             = true,
+        RequiresEquippedBothHands = true,
+    }
+
+    item Attack_Bayonet
+    {
+        DisplayName      = Do not spawn me with the debug menu (VWP2GoM),
+        DisplayCategory  = WeaponCrafted,
+        Weight           = 0.0,
+        Icon             = Knife_FairbairnSykes,
+        ItemType         = base:weapon,
+        ConditionMax     = 10000,
+        AttachmentType   = Shovel,
+        SubCategory      = Spear,
+        Categories       = base:improvised;base:spear,
+        TwoHandWeapon    = true,
+        HeadConditionMax = 10,
+        HeadCondition    = 10,
+        Sharpness        = 1.0,
+    }
+
+    item CloseBolt
+    {
+        DisplayName     = Close Bolt (VWP2GoM),
+        DisplayCategory = WeaponPart,
+        Icon            = ShotgunChoke,
+        ItemType        = base:weaponpart,
+        PartType        = MovingBolt,
+    }
+
+    item DoubleBarrelShotgun
+    {
+        ManuallyRemoveSpentRounds = true,
+    }
+
+    item DoubleBarrelShotgunSawnoff
+    {
+        ManuallyRemoveSpentRounds = true,
+    }
+
+    item GenericFakeItem
+    {
+        DisplayName     = Generic Fake Item (VWP2GoM),
+        DisplayCategory = Junk,
+        Icon            = ShotgunChoke,
+        ItemType        = base:normal,
+    }
+
+    item Heavy_Pistol_Silencer
+    {
+        DisplayName     = Heavy Pistol Silencer (VWP2GoM),
+        DisplayCategory = WeaponPart,
+        Weight          = 1.0,
+        Icon            = HandgunLaser,
+        ItemType        = base:weaponpart,
+        PartType        = Muzzle,
+    }
+
+    item JS14_Clip
+    {
+        ItemType = base:weaponpart,
+        PartType = Clip,
+    }
+
+    item JS14_Clip_30
+    {
+        DisplayName     = JS14 30-Round Magazine (VWP2GoM),
+        DisplayCategory = Ammo,
+        Weight          = 0.2,
+        Icon            = m16clip,
+        ItemType        = base:weaponpart,
+        PartType        = Clip,
+        MaxAmmo         = 30,
+        AmmoType        = base:bullets_556,
+        CanStack        = false,
+    }
+
+    item JS5_Clip
+    {
+        DisplayName     = JS5 20-Round Magazine (VWP2GoM),
+        DisplayCategory = Ammo,
+        Weight          = 0.2,
+        Icon            = BerettaClip,
+        ItemType        = base:weaponpart,
+        PartType        = Clip,
+        MaxAmmo         = 30,
+        AmmoType        = base:bullets_9mm,
+        CanStack        = false,
+    }
+
+    item JS5_Stock_Deployed
+    {
+        DisplayName     = JS5 Stock (Deployed) (VWP2GoM),
+        DisplayCategory = WeaponPart,
+        Icon            = RifleRecoilPad,
+        ItemType        = base:weaponpart,
+        PartType        = StockIntegrated,
+    }
+
+    item JS5_Stock_Folded
+    {
+        DisplayName     = JS5 Stock (Folded) (VWP2GoM),
+        DisplayCategory = WeaponPart,
+        Icon            = RifleRecoilPad,
+        ItemType        = base:weaponpart,
+        PartType        = StockIntegrated,
+    }
+
+    item JS5_smg
+    {
+        DisplayName               = JS5 SMG (VWP2GoM),
+        DisplayCategory           = Weapon,
+        Weight                    = 4.0,
+        Icon                      = AssaultRifle,
+        ItemType                  = base:weapon,
+        MagazineType              = Base.JS5_Clip,
+        ConditionMax              = 10,
+        MaxAmmo                   = 30,
+        AmmoType                  = base:bullets_9mm,
+        FireMode                  = Auto,
+        FireModePossibilities     = Auto/Single/Burst,
+        AttachmentType            = Rifle,
+        WeaponReloadType          = boltaction,
+        Ranged                    = true,
+        SubCategory               = Firearm,
+        IsAimedFirearm            = true,
+        TwoHandWeapon             = true,
+        RequiresEquippedBothHands = true,
+    }
+
+    item M14Clip
+    {
+        ItemType = base:weaponpart,
+        PartType = Clip,
+    }
+
+    item M9_Bayonet
+    {
+        DisplayName     = M9 Bayonet (VWP2GoM),
+        DisplayCategory = Weapon,
+        Weight          = 1.0,
+        Icon            = Knife_FairbairnSykes,
+        ItemType        = base:weapon,
+        ConditionMax    = 10,
+        AttachmentType  = Knife,
+        SubCategory     = Stab,
+        Categories      = base:smallblade,
+        Sharpness       = 1.0,
+    }
+
+    item M9_Bayonet_Attachment
+    {
+        DisplayName     = M9 Bayonet (VWP2GoM),
+        DisplayCategory = WeaponPart,
+        Icon            = Knife_FairbairnSykes,
+        ItemType        = base:weaponpart,
+        PartType        = BayonetKnife,
+    }
+
+    item MP5SD_SMG
+    {
+        DisplayName               = MP5SD SMG (VWP2GoM),
+        DisplayCategory           = Weapon,
+        Weight                    = 2.5,
+        Icon                      = AssaultRifle,
+        ItemType                  = base:weapon,
+        MagazineType              = Base.9mmClip_25,
+        ConditionMax              = 10,
+        MaxAmmo                   = 30,
+        AmmoType                  = base:bullets_9mm,
+        FireMode                  = Auto,
+        FireModePossibilities     = Auto/Single/Burst,
+        AttachmentType            = Rifle,
+        WeaponReloadType          = boltaction,
+        Ranged                    = true,
+        SubCategory               = Firearm,
+        IsAimedFirearm            = true,
+        TwoHandWeapon             = true,
+        RequiresEquippedBothHands = true,
+    }
+
+    item MP5_SMG
+    {
+        DisplayName               = MP5 SMG (VWP2GoM),
+        DisplayCategory           = Weapon,
+        Weight                    = 2.6,
+        Icon                      = AssaultRifle,
+        ItemType                  = base:weapon,
+        MagazineType              = Base.9mmClip_25,
+        ConditionMax              = 10,
+        MaxAmmo                   = 30,
+        AmmoType                  = base:bullets_9mm,
+        FireMode                  = Auto,
+        FireModePossibilities     = Auto/Single/Burst,
+        AttachmentType            = Rifle,
+        WeaponReloadType          = boltaction,
+        Ranged                    = true,
+        SubCategory               = Firearm,
+        IsAimedFirearm            = true,
+        TwoHandWeapon             = true,
+        RequiresEquippedBothHands = true,
+    }
+
+    item OpenBolt
+    {
+        DisplayName     = Open Bolt (VWP2GoM),
+        DisplayCategory = WeaponPart,
+        Icon            = ShotgunChoke,
+        ItemType        = base:weaponpart,
+        PartType        = MovingBolt,
+    }
+
+    item PistolGlock
+    {
+        DisplayName      = Glock 17 Pistol (VWP2GoM),
+        DisplayCategory  = Weapon,
+        Weight           = 1.3,
+        Icon             = HandGun3,
+        ItemType         = base:weapon,
+        MagazineType     = Base.9mmClip,
+        ConditionMax     = 10,
+        MaxAmmo          = 15,
+        ClipSize         = 15,
+        AmmoType         = base:bullets_9mm,
+        AttachmentType   = Holster,
+        WeaponReloadType = handgun,
+        Ranged           = true,
+        SubCategory      = Firearm,
+        IsAimedFirearm   = true,
+    }
+
+    item Pistol_Silencer
+    {
+        DisplayName     = Pistol Silencer (VWP2GoM),
+        DisplayCategory = WeaponPart,
+        Weight          = 1.0,
+        Icon            = HandgunLaser,
+        ItemType        = base:weaponpart,
+        PartType        = Muzzle,
+    }
+
+    item Pistolm93r
+    {
+        DisplayName           = M93R Pistol (VWP2GoM),
+        DisplayCategory       = Weapon,
+        Weight                = 1.5,
+        Icon                  = HandGun3,
+        ItemType              = base:weapon,
+        MagazineType          = Base.9mmClip,
+        ConditionMax          = 10,
+        MaxAmmo               = 15,
+        ClipSize              = 15,
+        AmmoType              = base:bullets_9mm,
+        FireMode              = Burst,
+        FireModePossibilities = Single/Burst,
+        AttachmentType        = Holster,
+        WeaponReloadType      = handgun,
+        Ranged                = true,
+        SubCategory           = Firearm,
+        IsAimedFirearm        = true,
+    }
+
+    item SR25_Rifle
+    {
+        DisplayName               = SR-25 Rifle (VWP2GoM),
+        DisplayCategory           = Weapon,
+        Weight                    = 4.5,
+        Icon                      = AssaultRifle2,
+        ItemType                  = base:weapon,
+        MagazineType              = Base.308Clip_10,
+        ConditionMax              = 10,
+        MaxAmmo                   = 20,
+        AmmoType                  = base:bullets_308,
+        FireMode                  = Single,
+        AttachmentType            = Rifle,
+        WeaponReloadType          = boltaction,
+        Ranged                    = true,
+        SubCategory               = Firearm,
+        IsAimedFirearm            = true,
+        TwoHandWeapon             = true,
+        RequiresEquippedBothHands = true,
+    }
+
+    item Side_By_Side
+    {
+        DisplayName               = Side by Side Shotgun (VWP2GoM),
+        DisplayCategory           = Weapon,
+        Weight                    = 2,
+        Icon                      = Firearm_DoubleBarrelShotgun,
+        ItemType                  = base:weapon,
+        ConditionMax              = 10,
+        MaxAmmo                   = 2,
+        AmmoType                  = base:shotgun_shells,
+        HaveChamber               = false,
+        FireMode                  = Single,
+        AttachmentType            = Rifle,
+        WeaponReloadType          = doublebarrelshotgun,
+        ManuallyRemoveSpentRounds = true,
+        RackAfterShoot            = false,
+        InsertAllBulletsReload    = true,
+        Ranged                    = true,
+        SubCategory               = Firearm,
+        IsAimedFirearm            = true,
+        TwoHandWeapon             = true,
+        RequiresEquippedBothHands = true,
+    }
+
+    item Side_By_Side_Barrel_Close
+    {
+        DisplayName     = Side by Side Barrel (VWP2GoM),
+        DisplayCategory = WeaponPart,
+        Weight          = 3.0,
+        Icon            = ShotgunChoke,
+        ItemType        = base:weaponpart,
+        PartType        = Barrel,
+    }
+
+    item Side_By_Side_Barrel_Open
+    {
+        DisplayName     = Side by Side Barrel (VWP2GoM),
+        DisplayCategory = WeaponPart,
+        Weight          = 3.0,
+        Icon            = ShotgunChoke,
+        ItemType        = base:weaponpart,
+        PartType        = Barrel,
+    }
+
+    item Side_By_Side_Barrel_Sawnoff_Close
+    {
+        DisplayName     = Side by Side Barrel Sawnoff (VWP2GoM),
+        DisplayCategory = WeaponPart,
+        Weight          = 1.0,
+        Icon            = ShotgunChoke,
+        ItemType        = base:weaponpart,
+        PartType        = Barrel,
+    }
+
+    item Side_By_Side_Barrel_Sawnoff_Open
+    {
+        DisplayName     = Side by Side Barrel Sawnoff (VWP2GoM),
+        DisplayCategory = WeaponPart,
+        Weight          = 1.0,
+        Icon            = ShotgunChoke,
+        ItemType        = base:weaponpart,
+        PartType        = Barrel,
+    }
+}
