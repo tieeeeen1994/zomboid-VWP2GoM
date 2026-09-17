@@ -1,5 +1,5 @@
 version=1
-id=
+id=3803058865
 title=VWP2GoM - Vanilla Weapons Plus to Guns of Marz
 description=Moves an existing save from Vanilla Weapons Plus - Gunworks Edition to Guns of Marz without losing anything. Every gun, magazine, attachment, round, box and carton is converted, including in places you have not visited yet.
 description=
@@ -23,5 +23,5 @@ description=VWP2GoM Placeholders keeps Vanilla Weapons Plus items from being del
 description=
 description=[h1]Compatibility[/h1]
 description=Build 42. Requires Gunworks-gang and Guns of Marz. Multiplayer: install on the server and every client; the conversion runs on the server.
-tags=Build 42;Weapons;Multiplayer
+tags=Build 42;Multiplayer;Weapons
 visibility=unlisted

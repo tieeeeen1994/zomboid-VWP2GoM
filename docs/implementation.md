@@ -40,9 +40,14 @@ installed mods. Run it again if MarzVanillaGuns changes.
   - `AssaultRifle`'s fire modes
   - both double barrels' `ManuallyRemoveSpentRounds`
   The other 25 vanilla IDs load identically without MarzVanillaGuns, so they get no placeholder.
+- **`MountOn` is required on every weapon part.** `Item.InstanceItem` calls
+  `WeaponPart.setMountOn(script.mountOn)`, which calls `size()` on it without a null check. A part
+  placeholder without `MountOn` throws a NullPointerException every time it is created. The part
+  then fails to load, and so does **every weapon it is mounted on**. The first in-game test lost
+  a Glock this way (its `CloseBolt` part). Placeholders copy MarzVanillaGuns' `MountOn`, and vanilla
+  IDs that MarzVanillaGuns turned into parts (the magazines) get it as an override.
 - **What is deliberately left out:** Lua callbacks (`OnCreate`, `CanAttach`…), models, sounds,
-  `Tags`, `MountOn`, `GunType`. None of them are needed to load, and each is another way for a
-  line to fail.
+  `Tags`, `GunType`. None of them are needed to load, and each is another way for a line to fail.
 - **`mvgi:bullets_762`** is only registered while MarzVanillaGuns' `registries.lua` runs, so
   placeholders use `swmg:bullet_762x39` instead. An unknown ammo type would load as null.
 - **Values containing `,` or `=` stop the generator.** One unparsable line makes the game drop
@@ -129,8 +134,10 @@ the network. It survives through `modData.MagazineType`, which Gunworks re-appli
    - `Map.RequiredPartSwaps` handles the JS3T pump selector and the sawn-off double barrel
 3. **Mount functional attachments** in `Map.PartPriority` order, trying each candidate in
    `Map.Parts[...].mount`:
-   - The gun must be listed in the part's `MountOn`. Quotes are stripped, because GoM's bayonets
-     quote their entries.
+   - The gun must be listed in the part's `MountOn`. The engine resolves `MountOn` entries through
+     `ScriptManager.getItem` and drops any it can't find, so GoM's bayonets (whose entries are
+     quoted) end up with an empty list. Bayonets are therefore checked against Gunworks'
+     `Bayonet.BayonetMountableWeapons` registry instead.
    - The PartType slot must be free, and no `UpgradeExclusives` or bayonet exclusive may block it.
    - Required parents come from `RequiredAttachment.Dependencies` / `AnyDependencies`. Missing
      ones are mounted first (rails, muzzle devices). If that fails, the parents added for this
@@ -205,6 +212,23 @@ and vanilla items"). The converter wraps that function:
 - **Every other recorded item is left alone:** saved items are converted deterministically by
   the scans above (vanilla revolvers are rerolled by caliber with their state kept).
 
+## Debug mode stop and log reset
+
+`shared/VWP2GoM/VWP2GoM_Guard.lua` runs on `Events.OnInitWorld` in single player and on the
+server.
+
+- **The log is cleared.** `VWP2GoM.log` is rewritten with a header naming the world, so each load
+  starts a fresh log.
+- **Debug mode stops the game.** If `getDebug()` is true, it writes a `STOPPED` line and exits.
+  - **Why:** in debug mode, `InventoryItem.loadItem` throws on a size mismatch instead of skipping
+    to the end of the item.
+  - **Why this point:** `OnInitWorld` fires in `IsoWorld.init` before `WorldDictionary.init`,
+    `ServerMap.init` and any player or chunk loading, so nothing has been read or written yet.
+  - **How:** with no player object, `Core.quit()` saves only `options.ini` and calls
+    `System.exit(0)`. If a player object still exists, `Core.quitToDesktop()` is used instead.
+    That goes through `GameWindow.exit()`, which only saves the world when `okToSaveOnExit` is
+    set, and `GameLoadingState` keeps that false until loading has finished.
+
 ## Log
 
 Every conversion writes a line to the console and to `Zomboid/Lua/VWP2GoM.log`, for example:
@@ -217,7 +241,13 @@ Base.AssaultRifleAK47 [cond 10/10, ammo 60+1, mag] -> MarzGuns.AK47 [cond 15/15,
 
 `tests/` runs the converter offline against the real item scripts, the real Gunworks framework
 modules and the real GoM registries, with a strict fake of the Java API (`fake_pz.lua`). Calling a
-method the fake does not define is an error.
+method the fake does not define is an error. The fake also reproduces engine behaviour found in
+game: a weapon part without `MountOn` fails to instance, and `MountOn` keeps only entries that
+resolve to a script.
+
+The tests run standard Lua 5.1, not Kahlua. Kahlua has no one-argument `next(t)` (the first
+in-game run failed on it), so check any standard-library call against vanilla's Lua before using
+it.
 
 ```
 uv run --with lupa python3 tests/run_tests.py      # add -v to print the log
@@ -237,6 +267,8 @@ before and after. The scenarios:
 - the GoM wrapper
 - vanilla revolvers rerolled by caliber
 - dedicated-server packets: replace for a player inventory, delayed equip, nested bag re-send
+- placeholders: all 59 instance using only vanilla + GoM + placeholder scripts, and a Glock with
+  parts converts without MarzVanillaGuns loaded
 - M16A2 bayonet, rails and fire mode
 - MP5 light
 - L92 capacity

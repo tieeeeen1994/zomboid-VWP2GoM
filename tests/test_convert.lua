@@ -45,6 +45,9 @@ local function tick(n)
     end
 end
 
+local initWorldHandlers = {}
+Events.OnInitWorld = { Add = function(fn) initWorldHandlers[#initWorldHandlers + 1] = fn end, Remove = function() end }
+require("VWP2GoM/VWP2GoM_Guard")
 require("VWP2GoM/VWP2GoM_Server")
 local Map = require("VWP2GoM/VWP2GoM_Map")
 
@@ -443,6 +446,49 @@ test("Dedicated server: packets for player inventory, hands and nested bags", fu
     VWP2GoM.scanPlayer(player)
     check(#sent("remove") == 0, "bag in a player inventory is not re-sent (the replace reaches the owner)")
     SERVER_MODE = false
+end)
+
+test("Placeholders: every placeholder instances, and a Glock converts without MarzVanillaGuns", function()
+    local realScripts = SCRIPTS
+    SCRIPTS = SCRIPTS_PHASE_B
+    local ok, err = pcall(function()
+        local broken = {}
+        for i = 1, #PLACEHOLDER_TYPES do
+            local fullType = PLACEHOLDER_TYPES[i]
+            local okItem, item = pcall(instanceItem, fullType)
+            if not okItem or not item then
+                broken[#broken + 1] = fullType .. " (" .. tostring(item) .. ")"
+            end
+        end
+        check(#broken == 0, "all " .. #PLACEHOLDER_TYPES .. " placeholders instance" .. (#broken > 0 and (": " .. table.concat(broken, "; ")) or ""))
+
+        local crate = NewContainer("crate", nil)
+        local glock = mvgWeapon("Base.PistolGlock", {
+            parts = { "Base.Pistol_Silencer", "Base.CloseBolt" }, mag = "Base.9mmClip", count = 15, chambered = true,
+        })
+        crate:AddItem(glock)
+        local before = roundsIn(crate)
+        VWP2GoM.scanContainer(crate)
+        check(#ofType(crate, "MarzGuns.M92FS") == 1, "Glock became an M92FS")
+        check(roundsIn(crate) == before, "rounds conserved (" .. before .. ")")
+    end)
+    SCRIPTS = realScripts
+    if not ok then error(err) end
+end)
+
+test("Entering a world clears the log, and debug mode stops the game before it loads", function()
+    LOG_FILE_LINES = { "old line from a previous world" }
+    DEBUG_MODE = false
+    QUIT_CALLS = {}
+    for _, fn in ipairs(initWorldHandlers) do fn() end
+    check(#LOG_FILE_LINES == 1 and string.find(LOG_FILE_LINES[1], "TestWorld", 1, true) ~= nil, "log cleared and started with the world name")
+    check(#QUIT_CALLS == 0, "no quit outside debug mode")
+
+    DEBUG_MODE = true
+    for _, fn in ipairs(initWorldHandlers) do fn() end
+    check(#QUIT_CALLS == 1 and QUIT_CALLS[1] == "quit", "debug mode quits")
+    check(string.find(LOG_FILE_LINES[#LOG_FILE_LINES], "STOPPED", 1, true) ~= nil, "reason written to the log")
+    DEBUG_MODE = false
 end)
 
 PrintToConsole(string.format("\n%d failure(s)", TEST_FAILURES))

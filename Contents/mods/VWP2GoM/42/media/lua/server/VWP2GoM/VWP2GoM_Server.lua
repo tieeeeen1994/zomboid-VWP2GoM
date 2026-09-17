@@ -361,6 +361,7 @@ local function scanPlayers()
 end
 
 local pendingGoM = {}
+local pendingCount = 0
 local freshLoot = {}
 
 local function wrapGoMReplacement()
@@ -370,15 +371,16 @@ local function wrapGoMReplacement()
     local original = MarzGuns_OnCreate.VanillaReplace
     MarzGuns_OnCreate.VWP2GoMOriginalVanillaReplace = original
     MarzGuns_OnCreate.VanillaReplace = function(item)
-        if item then
+        if item and not pendingGoM[item] then
             pendingGoM[item] = true
+            pendingCount = pendingCount + 1
         end
     end
     MarzGuns_OnCreate.VWP2GoMWrapped = true
 end
 
 local function releasePending()
-    if next(pendingGoM) == nil then
+    if pendingCount == 0 then
         return
     end
     local original = MarzGuns_OnCreate and MarzGuns_OnCreate.VWP2GoMOriginalVanillaReplace
@@ -388,6 +390,7 @@ local function releasePending()
         end
     end
     pendingGoM = {}
+    pendingCount = 0
     freshLoot = {}
 end
 

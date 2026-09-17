@@ -172,7 +172,13 @@ local function makeItem(fullType)
     end
 
     if class == "WeaponPart" then
-        local mountOn = newList(splitList(script.mounton, ";"))
+        assert(script.mounton ~= nil, "engine NPE: WeaponPart.setMountOn(null) for " .. fullType)
+        local resolved = {}
+        for _, entry in ipairs(splitList(script.mounton, ";")) do
+            if not string.find(entry, "%.") then entry = "Base." .. entry end
+            if SCRIPTS[entry] then resolved[#resolved + 1] = entry end
+        end
+        local mountOn = newList(resolved)
         function item:getPartType() return script.parttype end
         function item:getMountOn() return mountOn end
     end
@@ -340,9 +346,14 @@ sendServerCommand = record("serverCommand")
 function newrandom()
     return { random = function(_, a, b) if b then return a end return 1 end }
 end
-function getFileWriter()
+LOG_FILE_LINES = {}
+function getFileWriter(_, _, append)
+    if not append then LOG_FILE_LINES = {} end
     return {
-        writeln = function(_, line) LOG[#LOG + 1] = line end,
+        writeln = function(_, line)
+            LOG[#LOG + 1] = line
+            LOG_FILE_LINES[#LOG_FILE_LINES + 1] = line
+        end,
         close = function() end,
     }
 end
@@ -370,3 +381,15 @@ AmmoType = {
     end,
 }
 ItemTag = { register = function(id) return id end }
+
+DEBUG_MODE = false
+QUIT_CALLS = {}
+function getDebug() return DEBUG_MODE end
+function getPlayer() return nil end
+function getWorld() return { getWorld = function() return "TestWorld" end } end
+function getCore()
+    return {
+        quit = function() QUIT_CALLS[#QUIT_CALLS + 1] = "quit" end,
+        quitToDesktop = function() QUIT_CALLS[#QUIT_CALLS + 1] = "quitToDesktop" end,
+    }
+end

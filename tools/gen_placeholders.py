@@ -27,7 +27,7 @@ LOAD_KEYS = [
     "WeaponReloadType", "ManuallyRemoveSpentRounds", "RackAfterShoot", "InsertAllBulletsReload",
     "Ranged", "SubCategory", "IsAimedFirearm", "Categories", "TwoHandWeapon",
     "RequiresEquippedBothHands", "HeadConditionMax", "HeadCondition", "Sharpness", "UseDelta",
-    "Count",
+    "Count", "MountOn",
 ]
 IDENTITY_KEYS = ["DisplayCategory", "Weight"]
 

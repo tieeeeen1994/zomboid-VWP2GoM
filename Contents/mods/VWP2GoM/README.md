@@ -16,8 +16,8 @@ Subscribe to these on the Steam Workshop:
 |---|---|---|
 | Gunworks-gang | `SWMG` | 3722064198 |
 | Guns of Marz | `GunsOfMarz` | 3722134990 |
-| VWP2GoM - Vanilla Weapons Plus to Guns of Marz | `VWP2GoM` | *(this item)* |
-| VWP2GoM Placeholders | `VWP2GoM_Placeholders` | *(this item)* |
+| VWP2GoM - Vanilla Weapons Plus to Guns of Marz | `VWP2GoM` | 3803058865 |
+| VWP2GoM Placeholders | `VWP2GoM_Placeholders` | 3803058865 |
 
 The Guns of Marz Workshop item also contains **Guns of Marz (Old Version)**. Don't enable that
 one.
@@ -27,7 +27,8 @@ one.
 1. Quit the game.
 2. Back up the save: copy its folder from `Zomboid/Saves/<game mode>/<save name>/` (for example
    `Zomboid/Saves/Apocalypse/MySave/`) to somewhere outside `Zomboid`.
-3. Start the game without the `-debug` launch option.
+3. Start the game without the `-debug` launch option. In debug mode VWP2GoM closes the game
+   before the world loads, so nothing is lost or saved.
 4. On the main menu click **LOAD**.
 5. Select the save, click **MORE...**, then click **Choose Mods...**.
 6. Disable **Vanilla Weapons Plus - Gunworks Edition**.
@@ -56,9 +57,10 @@ one.
    ```
 5. Edit the `WorkshopItems=` line:
    - Remove `3773834525` (Vanilla Weapons Plus).
-   - Add `3722064198`, `3722134990` and this item's Workshop ID.
+   - Add `3722064198`, `3722134990` and `3803058865`.
    - Separate IDs with `;`.
-6. Start the server. Players download the new mods automatically when they join.
+6. Start the server without `-debug`. In debug mode VWP2GoM shuts the server down before the
+   world loads. Players download the new mods automatically when they join.
 7. Open `Zomboid/Lua/VWP2GoM.log` on the server machine and search it for `FAILED`.
 8. Keep all four mods in the server's mod list from now on.
 
@@ -100,7 +102,8 @@ If something no longer fits the new gun, it is placed next to the gun rather tha
 
 ## The log
 
-VWP2GoM writes one line to `Zomboid/Lua/VWP2GoM.log` for each item it converts:
+`Zomboid/Lua/VWP2GoM.log` is cleared each time a world loads. Its first line names the world, and
+after that VWP2GoM writes one line for each item it converts:
 
 ```
 Base.PistolGlock [cond 7/10, ammo 12+1, mag] -> MarzGuns.M92FS [cond 7/10, ammo 12+1, mag] | none on Player
@@ -108,6 +111,8 @@ Base.PistolGlock [cond 7/10, ammo 12+1, mag] -> MarzGuns.M92FS [cond 7/10, ammo 
 
 That line reads: a Glock at condition 7 of 10, with 12 rounds in its magazine and 1 in the
 chamber, became an M92FS with the same, in the player's inventory.
+
+A line starting with `STOPPED` means the game was closed because debug mode was on.
 
 A line starting with `FAILED` means that item was left unchanged. VWP2GoM tries it again the next
 time that area loads or that player joins. If the same item keeps failing, report the line along

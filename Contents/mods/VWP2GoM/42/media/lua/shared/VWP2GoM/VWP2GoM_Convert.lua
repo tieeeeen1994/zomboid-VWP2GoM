@@ -13,6 +13,14 @@ local Convert = {}
 
 Convert.LOG_FILE = "VWP2GoM.log"
 
+function Convert.resetLog(header)
+    local writer = getFileWriter(Convert.LOG_FILE, true, false)
+    if writer then
+        writer:writeln(header)
+        writer:close()
+    end
+end
+
 function Convert.log(line)
     print("[VWP2GoM] " .. line)
     local writer = getFileWriter(Convert.LOG_FILE, true, true)
@@ -268,14 +276,23 @@ end
 
 local function mountAllowed(weapon, part)
     local fullType = weapon:getFullType()
-    local mountOn = part:getMountOn()
-    if mountOn and mountOn:size() > 0 then
+    local partType = part:getFullType()
+    local bayonetWeapons = Bayonet.BayonetMountableWeapons
+    local isBayonet = part:getPartType() == "BayonetKnife"
+    if isBayonet then
+        local accepted = bayonetWeapons and bayonetWeapons[fullType]
+        if not accepted or not accepted[partType] then
+            return false
+        end
+    else
+        local mountOn = part:getMountOn()
         local found = false
-        for i = 0, mountOn:size() - 1 do
-            local entry = string.gsub(mountOn:get(i), '"', "")
-            if entry == fullType then
-                found = true
-                break
+        if mountOn then
+            for i = 0, mountOn:size() - 1 do
+                if mountOn:get(i) == fullType then
+                    found = true
+                    break
+                end
             end
         end
         if not found then

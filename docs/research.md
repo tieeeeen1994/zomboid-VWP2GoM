@@ -322,6 +322,13 @@ isMelee = !weaponCategories.isEmpty()
     - `mvgi:*` ids only exist while MarzVanillaGuns' `registries.lua` runs.
   - **UNCONFIRMED:** what later reload code does with a null ammoType.
   - `WeaponReloadType` falls back to `NONE` when unknown or missing.
+- **A weapon part with no `MountOn` cannot be created.** Confirmed in game: `InstanceItem` calls
+  `WeaponPart.setMountOn(null)`, which throws `NullPointerException: Cannot invoke
+  "java.util.List.size()" because "mountOn" is null`. Loading such a part fails, and so does any
+  weapon carrying it.
+- **`MountOn` entries are resolved.** `setMountOn` looks each entry up with
+  `ScriptManager.getItem` (adding the part's module when there is no `.`) and keeps only those
+  that exist. Quoted entries, as in GoM's bayonets, never resolve.
 - **Defaults** from `Item.<init>`: `conditionMax = 10`, `haveChamber = true`; `clipSize`,
   `maxAmmo` and `fireModePossibilities` start at 0 or null.
 - **Two definitions of the same item merge.** `ScriptBucket.CreateFromTokenPP` appends the

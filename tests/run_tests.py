@@ -80,6 +80,16 @@ def main():
     scripts.update(parse(txt(GOM)))
     scripts.update(parse(txt(SWMG)))
 
+    phase_b = {k: v for k, v in scripts.items() if not k.startswith("Base.") or k in vanilla}
+    for k in list(phase_b):
+        if k in vanilla:
+            phase_b[k] = dict(vanilla[k])
+    placeholders = parse([ROOT + "/Contents/mods/VWP2GoM_Placeholders/42/media/scripts/zz_VWP2GoM_Placeholders.txt"])
+    for full_type, props in placeholders.items():
+        merged = dict(phase_b.get(full_type, {}))
+        merged.update(props)
+        phase_b[full_type] = merged
+
     ammo_keys = dict(VANILLA_AMMO_KEYS)
     for path in [SWMG + "/registries.lua", GOM + "/registries.lua"]:
         for ident, key in re.findall(r'AmmoType\.register\("([^"]+)",\s*"([^"]+)"\)', open(path).read()):
@@ -89,6 +99,8 @@ def main():
     g = lua.globals()
     g.SCRIPTS = lua.table_from({k: lua.table_from(v) for k, v in scripts.items()})
     g.AMMO_KEYS = lua.table_from(ammo_keys)
+    g.SCRIPTS_PHASE_B = lua.table_from({k: lua.table_from(v) for k, v in phase_b.items()})
+    g.PLACEHOLDER_TYPES = lua.table_from(sorted(placeholders))
 
     roots = [MOD + "/shared", MOD + "/server", SWMG + "/lua/shared", GOM + "/lua/shared", HERE]
     g.SEARCH_ROOTS = lua.table_from(roots)
