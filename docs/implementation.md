@@ -33,13 +33,17 @@ installed mods. Run it again if MarzVanillaGuns changes.
     `MagazineType`, `ConditionMax`, `MaxAmmo`, `ClipSize`, `AmmoType`, `HaveChamber`, fire modes,
     `AttachmentType`, reload type, `ManuallyRemoveSpentRounds`, `Categories` for the knives, and
     so on
-- **Vanilla IDs** get only the values MarzVanillaGuns changed from vanilla. The generator
-  compares them and found nine items:
+- **Vanilla IDs (16)** get only the values MarzVanillaGuns changed from vanilla. The generator
+  compares them and found:
   - the six vanilla magazines, which MarzVanillaGuns turned from `base:normal` into
-    `base:weaponpart` / `PartType = Clip`
+    `base:weaponpart` / `PartType = Clip` (with `MountOn`)
   - `AssaultRifle`'s fire modes
   - both double barrels' `ManuallyRemoveSpentRounds`
-  The other 25 vanilla IDs load identically without MarzVanillaGuns, so they get no placeholder.
+  - the `MountOn` lists of seven vanilla attachments (`x2Scope`, `x4Scope`, `RedDot`,
+    `TritiumSights`, `Laser`, `GunLight`, `RecoilPad`), which MarzVanillaGuns extended with its
+    own guns
+  The other 18 vanilla IDs load identically without MarzVanillaGuns, so they get no placeholder.
+  That makes 59 placeholders in all.
 - **`MountOn` is required on every weapon part.** `Item.InstanceItem` calls
   `WeaponPart.setMountOn(script.mountOn)`, which calls `size()` on it without a null check. A part
   placeholder without `MountOn` throws a NullPointerException every time it is created. The part
@@ -65,7 +69,8 @@ installed mods. Run it again if MarzVanillaGuns changes.
 | `server/VWP2GoM/VWP2GoM_Server.lua` | Finds source items, swaps them in place, sends the network updates, and logs. Returns immediately on an MP client |
 | `client/VWP2GoM/VWP2GoM_Client.lua` | MP client only: asks the server to convert its player on join, and refreshes the hotbar when told |
 
-Conversion only runs where changes persist: single player and the dedicated server.
+Conversion only runs where changes persist: single player and the server (every file but the
+client one returns early when `isClient()`).
 
 ## Finding items
 
@@ -74,7 +79,7 @@ Conversion only runs where changes persist: single player and the dedicated serv
 | Map containers, floor items, corpses | `Events.LoadChunk`, which fires after a chunk's objects, corpses and first-time loot exist. The scan walks the 8x8 squares on every level |
 | Newly rolled loot (map, zombies, vehicles) | `Events.OnFillContainer` |
 | Vehicle part containers | `Events.OnSpawnVehicleEnd`, which fires on every spawn and every load |
-| Player inventories | `OnCreatePlayer` and `OnGameStart` (single player), plus `EveryOneMinute` for every player (catches MP players, who have no join event on a server) |
+| Player inventories | `OnCreatePlayer` and `OnGameStart` (single player), the client's `scanMe` command (MP join), plus `EveryOneMinute` for every player. The minute sweep also picks up vanilla items that enter an inventory later, such as crafted rounds |
 
 - **Bags are scanned recursively**, up to 8 levels deep.
 - **A converted item is never a source again**, so scanning the same place twice does nothing.
@@ -155,7 +160,14 @@ the network. It survives through `modData.MagazineType`, which Gunworks re-appli
      - Use the mapped magazine if the gun's GoM magazine profile lists it; otherwise use the
        largest magazine in the profile.
      - The gun keeps the top rounds (last in `AmmoList`, next to fire) up to that magazine's
-       capacity. The rest stay in a loose magazine of the mapped type, or become loose rounds.
+       capacity. When the mapped magazine was used, the rest become loose rounds. When it was
+       not, a loose magazine of the mapped type is always handed back, holding the rest (possibly
+       none). Examples: an M93R gets a 60-round `9x19Magazine60_M93R` plus an empty
+       `9x19Magazine15_M92FS`; an AC556 (M16A3) gets a 150-round STANAG plus an empty
+       `223Magazine20_Mini14`; an SR25 (PSG1) gets its 5-round magazine plus an M14 magazine
+       holding the surplus.
+     - Guns with no Gunworks magazine profile (M14, M1911, PSG1, CAMP_CARBINE…) accept only their
+       script `MagazineType`.
      - Sets `magazineType`, `maxAmmo`, `containsClip`, `modData.MagazineType`, and the visual clip
        part through `Magazine.manageMagazineAttachment`.
    - **Tube, revolver or break-action target:**
@@ -181,7 +193,9 @@ the network. It survives through `modData.MagazineType`, which Gunworks re-appli
 `Map.RerollWeapons` lists the three vanilla revolvers. `Convert.weaponTarget` picks a random entry
 from `Convert.rerollPool(source)`: the `Map.RerollCandidates` handguns that share the source's
 handgun class (`AttachmentType` starting with `Holster`) and accept its translated round
-(`Convert.accepts`). Pools are cached per ammo family and class. The pick then goes through the
+(`Convert.accepts`). With the current GoM data only revolvers qualify: `.38 .357` → PYTHON,
+RHINO, MP412 or DETECTIVE_38; `.44 Magnum` → SW629. Pools are cached per ammo family and class.
+The pick then goes through the
 same `Convert.weapon` path as every other gun, so rounds, condition, name and slots carry over and
 no bonus items are added.
 
@@ -194,8 +208,10 @@ section below).
   out loose (the .44 magazine becomes an empty .50 magazine plus loose .44 rounds).
 - **Rounds, boxes and cartons:** 1:1 through `Map.Rounds` / `Map.AmmoPacks`. .44 boxes and
   cartons are repacked to exactly the same round count (`Map.AmmoRepacks`).
-- **Loose attachments:** the function's `loose` item. Condition, battery charge (proportional),
-  on/off state and modData are copied.
+- **Loose attachments:** the function's `loose` item. `looseLongGun` is used instead only for a
+  part that came off a gun that is not a handgun, so a pump shotgun's `AmmoStraps` come back as a
+  `Rem700_Sling`; attachments found loose always use `loose`. Condition, battery charge
+  (proportional), on/off state, favourite, custom name and modData are copied.
 - **Knives and internal items found loose:** `Map.LooseOther`.
 
 ## GoM's random vanilla replacement
@@ -231,11 +247,22 @@ server.
 
 ## Log
 
-Every conversion writes a line to the console and to `Zomboid/Lua/VWP2GoM.log`, for example:
+`Convert.log` writes each line to the console (prefixed `[VWP2GoM]`) and appends it to
+`Zomboid/Lua/VWP2GoM.log`. Every conversion writes one line (`report` in `VWP2GoM_Server.lua`), for example:
 
 ```
-Base.AssaultRifleAK47 [cond 10/10, ammo 60+1, mag] -> MarzGuns.AK47 [cond 15/15, ammo 60+1, mag] + MarzGuns.M9_BAYONET | none on Player
+Base.AssaultRifleAK47 [cond 10/10, ammo 60+1, mag] -> MarzGuns.AK47 [cond 15/15, ammo 60+1, mag] + MarzGuns.M9_BAYONET | none on Player at 10862,9412,0
 ```
+
+- `Convert.describe` adds `[cond c/max, ammo n(+1)(, mag)]` for weapons and `[ammo n]` for
+  magazines.
+- Extras follow a `+`.
+- The location comes from `describeContainer`: `<container type> on <parent object name> at
+  x,y,z`, `<container type> in <bag full type> / <outer location>` for bags, or `floor at x,y,z`.
+
+Other lines: `FAILED, left unchanged: <type> (<error or "no target item">)`, `FAILED while
+placing <type>: <error>`, `Guns of Marz or Gunworks is not loaded; nothing will be converted.`
+(written once, when `ready()` first fails), and the guard's `STOPPED` line.
 
 ## Tests
 
@@ -253,6 +280,9 @@ it.
 uv run --with lupa python3 tests/run_tests.py      # add -v to print the log
 ```
 
+`run_tests.py` reads the installed mods and game scripts from the macOS Steam paths in its
+`WORKSHOP` and `GAME` constants. On another system, change those two lines first.
+
 Each scenario checks that no source item is left behind and that the number of rounds is the same
 before and after. The scenarios:
 
@@ -269,6 +299,7 @@ before and after. The scenarios:
 - dedicated-server packets: replace for a player inventory, delayed equip, nested bag re-send
 - placeholders: all 59 instance using only vanilla + GoM + placeholder scripts, and a Glock with
   parts converts without MarzVanillaGuns loaded
+- entering a world clears the log, and debug mode quits before the world loads
 - M16A2 bayonet, rails and fire mode
 - MP5 light
 - L92 capacity

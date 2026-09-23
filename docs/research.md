@@ -70,7 +70,8 @@ registers them with `PreventRemoval`:
 
 They still need placeholders, because a weapon whose part fails to resolve is dropped whole
 (see below). Their meaning is carried again by weapon fields and modData, so the converter
-should not hand them out as loose items.
+does not hand them out as loose items (`Map.InternalPartTypes`); it rebuilds that state on the
+new gun instead.
 
 ## Guns of Marz and vanilla items
 
@@ -106,10 +107,12 @@ should not hand them out as loose items.
     inventory loads on the loading thread, so it is affected.
   - **UNCONFIRMED:** whether chunk loading runs on one of those three threads. Items in chunks
     streamed by `WorldStreamer` may skip `OnCreate`.
-  - **The migration mod must neutralise this.** Scripts call `OnCreate` by name through
+  - **VWP2GoM neutralises this.** Scripts call `OnCreate` by name through
     `LuaManager.getFunctionObject` each time, so replacing the global
-    `MarzGuns_OnCreate.VanillaReplace` with a wrapper works regardless of load order. The wrapper
-    hands vanilla-ID items to the state-preserving converter instead.
+    `MarzGuns_OnCreate.VanillaReplace` with a wrapper works regardless of load order. VWP2GoM's
+    wrapper only records the item; items that turn out to be fresh loot (`OnFillContainer`) are
+    passed to GoM's original function on the next tick, and every other item is left for the
+    state-preserving converter (implementation.md, "GoM's random vanilla replacement").
   - MarzVanillaGuns' own `MarzVanillaGuns_OnCreate.AttachParts` also runs on load, but
     `HandWeapon.load` starts with `clearAllWeaponParts()`, so the saved parts win.
 
@@ -516,16 +519,18 @@ on the server and on MP clients:
   `chunk:getGridSquare(lx, ly, z)` for local x/y 0–7 and `chunk:getMinLevel()` /
   `getMaxLevel()`.
 
-### Hook plan these events suggest
+### Hooks VWP2GoM uses
 
 | What | Hook |
 |---|---|
-| Map containers, floor items, corpses | `LoadChunk`: walk `getObjects()` (containers via `getContainerCount()` / `getContainerByIndex`, floor items via `IsoWorldInventoryObject:getItem()`) and `getStaticMovingObjects()` |
-| Newly generated loot | `OnFillContainer` |
-| Vehicles | `OnSpawnVehicleEnd`: walk `getPartCount()` / `getPartByIndex`, `part:getItemContainer()`, `part:getInventoryItem()` |
-| Zombie inventories | `OnZombieDead` |
-| Players | SP/client `OnCreatePlayer`; dedicated server polls `getOnlinePlayers()` or answers a client command |
-| Chunks already loaded before hooks exist | Nothing lists them on the server; mark converted items with modData and let `LoadChunk` handle each chunk as it loads |
+| Map containers, floor items, corpses | `LoadChunk`: walk `getObjects()` (containers via `getContainerCount()` / `getContainerByIndex`), `getWorldObjects()` (floor items via `IsoWorldInventoryObject:getItem()`) and `getStaticMovingObjects()` (corpses) |
+| Newly generated loot, including zombie inventories | `OnFillContainer` |
+| Vehicles | `OnSpawnVehicleEnd`: walk `getPartCount()` / `getPartByIndex` and each `part:getItemContainer()`. Items installed as vehicle parts (`part:getInventoryItem()`) are not scanned |
+| Players | `OnCreatePlayer` and `OnGameStart`, the client's `scanMe` command on the server, and an `EveryOneMinute` sweep of every player |
+| Chunks already loaded before hooks exist | Nothing lists them on the server. A converted item is no longer a source type, so `LoadChunk` can simply handle each chunk as it loads, again and again |
+
+`OnZombieDead` is not needed: a zombie's rolled inventory goes through `OnFillContainer`, and a
+corpse that is saved and loaded again is picked up by `LoadChunk`.
 
 Run conversions only where the change persists: single player or the server, never
 `isClient()`.
@@ -650,8 +655,9 @@ Run conversions only where the change persists: single player or the server, nev
 5. **No `Categories` on firearm placeholders, and never `OBSOLETE`.**
 6. **Validate every placeholder script.** One bad value removes the item type.
 7. **Do not load the migration with `-debug`.**
-8. **Convert floor items with `IsoWorldInventoryObject:swapItem`.** Inside containers use
-   `Remove` then `AddItem`, and send network updates on the server.
+8. **Convert floor items with `IsoWorldInventoryObject:swapItem`.** Inside containers `AddItem`
+   the new item first, then remove the original, so a failure can only duplicate, never lose.
+   Send network updates on the server.
 9. **Copy modData, condition, repairs, favourite, custom name, blood, ammo, clip and chamber
    state, jam and fire mode**, and remap any item full types stored inside modData values.
 10. **Copy `attachedSlot`, `attachedSlotType` and `attachedToModel`** so hotbar, back and holster
@@ -733,20 +739,20 @@ Read from the bytecode; dumps were in the session scratchpad.
 ## Item mapping and item state
 
 The full catalogue, mapping and state notes are in [mapping.md](mapping.md): every
-MarzVanillaGuns item, the GoM catalogue with mount rules, the proposed mapping with confidence,
+MarzVanillaGuns item, the GoM catalogue with mount rules, the implemented mapping with confidence,
 and every modData key. The item lists were extracted with
 [tools/parse_items.py](../tools/parse_items.py). The main points:
 
 - **GoM and MarzVanillaGuns can run together.** GoM's `incompatible=` list does not include
-  MarzVanillaGuns, and both require `SWMG`. The conversion can therefore run while
-  MarzVanillaGuns is still enabled, reading items through their real definitions; this avoids
-  the load pitfalls above for every area visited during that session.
-  - Placeholders are still needed for anything not converted before MarzVanillaGuns is removed.
+  MarzVanillaGuns, and both require `SWMG`.
+  - **The shipped procedure does not rely on that.** The user disables MarzVanillaGuns and
+    enables `VWP2GoM` and `VWP2GoM_Placeholders` in the same load, and the placeholders keep
+    every item loadable until it is converted. Areas nobody visits stay unconverted for as long
+    as it takes, so both VWP2GoM mods stay enabled for good.
   - **Placeholders must not be active at the same time as MarzVanillaGuns.** Two definitions of
     one item merge, so a placeholder would overwrite MarzVanillaGuns' models and icons, and
-    `Categories` would add up.
-  - **Design implication:** ship the placeholders as a separate mod, or a separate mod id, that
-    is enabled only in the load where MarzVanillaGuns is removed.
+    `Categories` would add up. They therefore ship as a separate mod id,
+    `VWP2GoM_Placeholders`, with `incompatible=MarzVanillaGuns`.
 - **All ammo is converted: rounds, boxes and cartons.** The full table with round counts is in
   [mapping.md, section C.3](mapping.md#c3-ammo-rounds-boxes-and-cartons).
   - **Only the MarzVanillaGuns 7.62x39 items would be lost**: `Base.762Bullets` / `762Box` /
@@ -759,8 +765,8 @@ and every modData key. The item lists were extracted with
     rounds; a carton becomes 9 boxes + 15 loose rounds).
   - `.308` goes to `SWMG.762x51_Bullet`, which keeps vanilla .308's stats, not to the weaker
     `SWMG.308_Bullet`.
-  - Bullet types inside `AmmoList`, `SpentAmmoList` and the player's `GunworksAmmoPref` are
-    remapped with the same table.
+  - Bullet types inside `AmmoList` and `SpentAmmoList` are remapped with the same table. The
+    player's `GunworksAmmoPref` is left alone; the framework ignores entries it no longer knows.
   - Use `SWMG.*_Bullet` rounds. GoM's own `MarzGuns.*_Bullet` scripts are orphans.
   - Hot Brass casings belong to Hot Brass and are left alone.
 - **Guns with no GoM counterpart convert to the GoM gun with the closest stats**, scored by
@@ -792,13 +798,15 @@ and every modData key. The item lists were extracted with
   - Framework actions append to it (loading), copy it (inserting), split it (ejecting) and pop
     from it (firing, racking).
   - **MarzVanillaGuns' `OnCreate` never writes it**, so guns and magazines can hold rounds with
-    no list. The converter should build one from the ammo type.
-  - Entries must be remapped (`Base.762Bullets` → `SWMG.762x39_Bullet`). Pad or trim from the
-    front to fit the new capacity, returning any surplus rounds.
+    no list. The converter builds one from the gun's ammo type (`Convert.roundsOf`).
+  - Every entry is remapped through `Map.Rounds` (`Base.762Bullets` → `SWMG.762x39_Bullet`,
+    vanilla types included). The list is padded or trimmed from the front to match the round
+    count, and rounds beyond the new capacity come out loose.
 - **Other modData to translate or reset:**
   - `MagazineType` (full type): translate.
   - `SpentAmmoList` (Hot Brass): remap and copy.
-  - `StockFolded`, `BipodDeployed`, `GW_BayonetDeployed`: copy when the matching part is fitted.
+  - `StockFolded` and `BipodDeployed`: copied from the source (`StockFolded` also follows a
+    `JS5_Stock_*` part). `GW_BayonetDeployed`: kept only when a bayonet was mounted.
   - `MagazineTypeLastIndex`, `ActiveAmmoProfile`, `GW_CachedBayonetSpear`,
     `GW_BayonetOriginalWeapon`, `GWG_FiringExplosiveAmmo`, `shortRackAfterInsert`: set nil.
 - **Visual parts become GoM parts:**
@@ -810,8 +818,9 @@ and every modData key. The item lists were extracted with
 - **Other state to copy:** condition, repairs, name and custom name, favourite, blood, fire mode
   (both mods use `Single` / `Burst` / `Auto`), attached slot fields, and part condition and
   GunLight battery.
-- **After converting**, call `StatsFactory.ReapplyAllModifiers`. In multiplayer, also call
-  `syncHandWeaponFields` and `Ammo.SyncAmmoListToClient`.
+- **After converting**, call `StatsFactory.ReapplyAllModifiers`. In multiplayer the server sends
+  the whole new item (`sendReplaceItemInContainer` / `sendAddItemToContainer`), so
+  `syncHandWeaponFields` and `Ammo.SyncAmmoListToClient` are not needed.
 
 ## Still open
 

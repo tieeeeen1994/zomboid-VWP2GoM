@@ -1,6 +1,6 @@
 name=VWP2GoM - Vanilla Weapons Plus to Guns of Marz
 id=VWP2GoM
-description=Converts every Vanilla Weapons Plus (Gunworks Edition) gun, magazine, attachment and round in a save into its Guns of Marz equivalent, keeping loaded ammo, condition, attachments, names and slots. Enable together with Guns of Marz. Also enable VWP2GoM Placeholders in the load where Vanilla Weapons Plus is removed.
+description=Converts the Vanilla Weapons Plus (Gunworks Edition) guns, magazines, attachments, bayonets and ammo in a save, including the vanilla ones it reworks, into their Guns of Marz equivalents, keeping loaded ammo, condition, attachments, names and slots. Enable together with Gunworks-gang and Guns of Marz. Also enable VWP2GoM Placeholders in the load where Vanilla Weapons Plus is removed, and keep both enabled afterwards.
 author=Tien
 modversion=1.0.0
 require=SWMG,GunsOfMarz

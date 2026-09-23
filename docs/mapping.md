@@ -1,4 +1,10 @@
-# MarzVanillaGuns (MVG) -> GunsOfMarz (GoM) migration research
+# MarzVanillaGuns (MVG) -> GunsOfMarz (GoM) mapping
+
+Sections A, B and D catalogue the two mods and the item state they keep. Section C is the mapping
+VWP2GoM implements; the code for it is
+[VWP2GoM_Map.lua](../Contents/mods/VWP2GoM/42/media/lua/shared/VWP2GoM/VWP2GoM_Map.lua) and
+[VWP2GoM_Convert.lua](../Contents/mods/VWP2GoM/42/media/lua/shared/VWP2GoM/VWP2GoM_Convert.lua),
+which win if this file ever disagrees with them.
 
 Paths (W = `~/Library/Application Support/Steam/steamapps/workshop/content/108600`):
 - MVG: `W/3773834525/mods/MarzVanillaGuns/42.18` (mod id `MarzVanillaGuns`, requires `SWMG`, module `Base`)
@@ -8,13 +14,13 @@ Paths (W = `~/Library/Application Support/Steam/steamapps/workshop/content/10860
 
 ## 0. Critical findings up front
 
-1. **Many MVG items reuse vanilla IDs** (Base.Pistol, Base.9mmClip, Base.x4Scope ...). MVG *overrides* them. Most importantly MVG turns vanilla magazines (`Base.9mmClip`, `44Clip`, `45Clip`, `M14Clip`, `JS14_Clip`, `556Clip`) from `ItemType=base:normal` into `base:weaponpart` / `PartType=Clip` so they can be mounted as visual parts. Once MVG is removed, those IDs revert to vanilla *normal* items and every MVG-only ID (e.g. `Base.OpenBolt`, `Base.556Clip_75`, `Base.AR_Silencer`) disappears. A weapon whose saved part list contains them will load broken. **The migration must run while MVG is still enabled** (MVG + GoM + SWMG all active), then MVG is removed.
+1. **Many MVG items reuse vanilla IDs** (Base.Pistol, Base.9mmClip, Base.x4Scope ...). MVG *overrides* them. Most importantly MVG turns vanilla magazines (`Base.9mmClip`, `44Clip`, `45Clip`, `M14Clip`, `JS14_Clip`, `556Clip`) from `ItemType=base:normal` into `base:weaponpart` / `PartType=Clip` so they can be mounted as visual parts. Once MVG is removed, those IDs revert to vanilla *normal* items and every MVG-only ID (e.g. `Base.OpenBolt`, `Base.556Clip_75`, `Base.AR_Silencer`) disappears. A weapon whose saved part list contains them will load broken. **VWP2GoM solves this with the `VWP2GoM_Placeholders` mod**, enabled in the same load that removes MVG: it restores every MVG-only item script and MVG's load-relevant changes to vanilla IDs, so saved items load intact until the converter replaces them (implementation.md, "The placeholders").
 2. **No Glock and no SR-25 and no .44 Desert Eagle in GoM.** GoM DEAGLE is .50 AE (caliber mismatch). No sawn-off pump shotgun, no select-fire Mini-14, no chokes / recoil pads / ammo straps / heavy-pistol suppressor.
-3. **Vanilla ammo does NOT need converting**: GoM `Registries/Ammunition.lua` adds vanilla bullet types into its families (`Base.Bullets9mm`, `Base.Bullets45`, `Base.Bullets44`, `Base.Bullets38`, `Base.Bullets357`, `Base.556Bullets`, `Base.308Bullets`, `Base.3030Bullets`, `Base.ShotgunShells`). GoM guns/mags accept them and AmmoList entries with those types are valid. Only **`Base.762Bullets` / `Base.762Box` / `Base.762Carton` (MVG-only)** must be converted -> `SWMG.762x39_Bullet` / `MarzGuns.762x39_Box` / `MarzGuns.762x39_Carton`.
+3. **Vanilla ammo would survive without converting**: GoM `Registries/Ammunition.lua` adds vanilla bullet types into its families (`Base.Bullets9mm`, `Base.Bullets45`, `Base.Bullets44`, `Base.Bullets38`, `Base.Bullets357`, `Base.556Bullets`, `Base.308Bullets`, `Base.3030Bullets`, `Base.ShotgunShells`), so GoM guns/mags accept them. Only **`Base.762Bullets` / `Base.762Box` / `Base.762Carton` (MVG-only)** would be lost. VWP2GoM nevertheless converts **all** rounds, boxes and cartons, including `AmmoList` entries, so everything matches GoM (C.3).
 4. **GoM round items `MarzGuns.*_Bullet` are orphans**: framework `registries.lua` registers every `swmg:*` AmmoType to `SWMG.*_Bullet`, GoM's ammo families and all GoM recipes use `SWMG.*_Bullet`. The `MarzGuns.9x19_Bullet` etc. scripts exist (same AmmoType) but nothing references them. Always convert rounds to `SWMG.*`.
-5. MVG `OnCreate` never writes `AmmoList`; GoM `OnCreate` does. MVG-spawned guns/mags that were never hand-reloaded have `currentAmmoCount>0` with no `AmmoList` -> migration should synthesize one.
+5. MVG `OnCreate` never writes `AmmoList`; GoM `OnCreate` does. MVG-spawned guns/mags that were never hand-reloaded have `currentAmmoCount>0` with no `AmmoList` -> VWP2GoM synthesizes one (`Convert.roundsOf`).
 6. MVG `RPM.lua` registers `"Base.AK47"` (typo) instead of `Base.AssaultRifleAK47`, so the MVG AK never had a RoF profile. Irrelevant for state (no modData), just FYI.
-7. MVG `registries.lua` registers AmmoTypes `mvgi:bullets_762 -> Base.762Bullets` and `mvgi:bullets_223 -> Base.223Bullets` (the latter item doesn't exist). If HandWeapon/magazine saves reference the AmmoType registry id, keeping a stub registration in the migration mod (`AmmoType.register("mvgi:bullets_762","SWMG.762x39_Bullet")`) for one release is a cheap safety net (not verified whether B42 serialises ammoType by id).
+7. MVG `registries.lua` registers AmmoTypes `mvgi:bullets_762 -> Base.762Bullets` and `mvgi:bullets_223 -> Base.223Bullets` (the latter item doesn't exist). VWP2GoM registers no stub: the placeholders use `swmg:bullet_762x39` instead, and the `HandWeapon.save` field list does not include `ammoType` (research.md, "Still open").
 
 ---
 
@@ -38,9 +44,9 @@ Script files: `media/scripts/MarzVanillaWeapons/items/{weapons,magazines,attachm
 | Base.AssaultRifleM4 | no | M4 Carbine | AR carbine | base:bullets_556 | Base.556Clip | 30 | Auto/Single (Auto) | boltaction | RPM 800; STANAG; bayonet; 556Muzzle 100% |
 | Base.AssaultRifleAK47 | no | AK-47 Assault Rifle | AR | mvgi:bullets_762 (7.62x39) | Base.762Clip_30 | 30 | Auto/Single (Auto) | boltaction | mag profile 762x39; bayonet; 762Muzzle 100%; RPM entry mis-keyed "Base.AK47" |
 | Base.AssaultRifle2 | yes | M14 | battle rifle | base:bullets_308 | Base.M14Clip | 20 | Single | boltaction | bayonet |
-| Base.SR25_Rifle | MarzGuns.PSG1 | **Closest stats** | No SR-25 in GoM. PSG1 is clearly nearest (1.44; M14 1.97, FAL 2.01): semi-auto 7.62x51, damage 1.2-2.0 vs 1.0-1.8, recoil 20 = 20, weight 4.5 = 4.5, aim 50 vs 45. Capacity 20 -> 5: the gun keeps 5 rounds in a `762x51Magazine5_PSG1`, and the surplus stays in a loose M14 magazine (see C.2). |
+| Base.SR25_Rifle | no | SR-25 Rifle | DMR | base:bullets_308 (7.62x51) | Base.308Clip_10 | 20 | Single | - | mag profile 762x51 |
 | Base.Shotgun | yes | JS-2000 | pump shotgun | base:shotgun_shells | - | 5 | Single | shotgun | pump = OpenBolt/CloseBolt; chokes, RecoilPad, AmmoStraps |
-| Base.ShotgunSawnoff | MarzGuns.REMINGTON_870 | **Closest stats** | No sawn-off pump in GoM. REMINGTON_870 and TRENCHGUN tie at 1.71 (MOSSBERG_590 1.73); the 870 is chosen as the plainer civilian pump. 5 shells = 5. |
+| Base.ShotgunSawnoff | yes | Sawed-off JS-2000 Shotgun | pump shotgun | base:shotgun_shells | - | 5 | Single | shotgun | pump = OpenBolt/CloseBolt; AmmoStraps |
 | Base.VarmintRifle | yes | MSR700 | bolt rifle | base:bullets_556 | - | 5 | Single | boltactionnomag | |
 | Base.HuntingRifle | yes | MSR788 | bolt rifle | base:bullets_308 | - | 4 | Single | boltactionnomag | |
 | Base.MSR7T_Rifle | yes | MSR-7T | tactical bolt rifle | base:bullets_308 | - | 4 | Single | boltactionnomag | Laser capable |
@@ -50,7 +56,7 @@ Script files: `media/scripts/MarzVanillaWeapons/items/{weapons,magazines,attachm
 | Base.L92_Carbine | yes | L92 | lever carbine | base:bullets_357 | - | 10 | Single | leveraction | |
 | Base.L94_Rifle | yes | L94 | lever rifle | base:bullets_3030 | - | 6 | Single | leveraction | |
 | Base.TrapperCarbine | yes | Trapper Carbine | pistol-caliber carbine | base:bullets_45 | Base.45Clip | 7 | Single | boltaction | 45Clip visual magazine |
-| Base.JS5_smg | MarzGuns.MP5 | **Closest stats** | Fictional 9mm SMG. MP5 is clearly nearest (0.47; MP5A2 0.65): identical damage 1.0-1.6, hit 50, aim 40, recoil 15, range 30, 30 rounds. Burst is lost (GoM MP5 is Auto/Single). Folding stock maps to `MP5_Integrated_Stock_*`. |
+| Base.JS5_smg | no | JS5 SMG | SMG (fictional) | base:bullets_9mm | Base.JS5_Clip | 30 | Auto/Single/Burst (Auto) | - | folding stock (`JS5_Stock_Folded` / `_Deployed`); never distributed by MVG |
 | Base.MP5_SMG | no | MP5 SMG | SMG | base:bullets_9mm | Base.9mmClip_25 | 30 | Auto/Single/Burst (Auto) | boltaction | RPM 850; profile "9mm MP5" |
 | Base.MP5SD_SMG | no | MP5SD SMG | suppressed SMG | base:bullets_9mm | Base.9mmClip_25 | 30 | Auto/Single/Burst | boltaction | |
 | Base.DoubleBarrelShotgun | yes | Double Barrel Shotgun | break-action | base:shotgun_shells | - | 2 | Single | doublebarrelshotgun | ManuallyRemoveSpentRounds; OnCreate AttachParts (no bolt) |
@@ -73,8 +79,8 @@ Script files: `media/scripts/MarzVanillaWeapons/items/{weapons,magazines,attachm
 | Base.556Clip_20 | no | 5.56mm 20-Round Magazine | bullets_556 | 20 | AssaultRifle, A3, M4 | STANAG |
 | Base.556Clip | yes (normal) | 5.56mm 30-Round Magazine | bullets_556 | 30 | AssaultRifle, A3, M4 | STANAG |
 | Base.556Clip_75 | no | 5.56mm 75-Round Magazine | bullets_556 | 75 | AssaultRifle, A3, M4 | STANAG |
-| Base.308Clip_10 | MarzGuns.762x51Magazine20_M14 | M | Loose magazine: capacity rises, no loss. Inside a converted SR25 (now PSG1) the host-dependent rule applies: the gun gets a `762x51Magazine5_PSG1` holding at most 5 rounds, and the original magazine is also handed back as a loose M14 magazine holding the surplus rounds. |
-| Base.308Clip_20 | MarzGuns.762x51Magazine20_M14 | M | Same as `308Clip_10`. Two MVG types collapse into one GoM type. |
+| Base.308Clip_10 | no | 7.62x51mm 10-Round Magazine | bullets_308 | 10 | SR25_Rifle | 762x51 |
+| Base.308Clip_20 | no | 7.62x51mm 20-Round Magazine | bullets_308 | 20 | SR25_Rifle | 762x51 |
 | Base.762Clip_30 | no | 7.62x39mm 30-Round Magazine | mvgi:bullets_762 | 30 | AssaultRifleAK47 | 762x39 |
 | Base.762Clip_75 | no | 7.62x39mm 75-Round Magazine | mvgi:bullets_762 | 75 | AssaultRifleAK47 | 762x39 |
 | Base.9mmClip_25 | no | 9mm 25-Round Magazine | bullets_9mm | 25 | MP5_SMG, MP5SD_SMG | 9mm MP5 |
@@ -562,7 +568,7 @@ Scripts: `media/scripts/MarzWeapons/items/{weapons/*,ammunition/*,attachments/*,
 
 ---
 
-## C. Proposed deterministic mapping MVG -> GoM
+## C. Deterministic mapping MVG -> GoM (as implemented)
 
 Confidence: H = same real-world model + caliber + capacity; M = right class/caliber, different model or small feature loss; L = best available, noticeable mismatch; FLAG = no good equivalent (explain handling). "Return" = detach and put the item (or rounds) into the same container as the converted weapon so nothing is lost.
 
@@ -594,12 +600,12 @@ are handed back as items.
 | Base.Pistol3 (D-E .44) | MarzGuns.SW629 | **Closest stats** | No .44 Desert Eagle in GoM. M1911 (2.38) and SW629 (2.45) are a near tie on the overall score; SW629 is chosen because it matches on the stats that define the gun: damage 1.2-1.8 vs 1.0-1.6 (M1911 0.9-1.2), recoil 17 = 17, sound radius 120 = 120, and the same .44 Magnum caliber, so loaded rounds stay loaded. Capacity 8 -> 6: surplus rounds are returned as `SWMG.44_Bullet`. The inserted magazine is returned as an item (see C.2 `44Clip`). |
 | Base.AssaultRifle (MVG "M16A2") | MarzGuns.M16A2 | H | Same model, burst/single, STANAG. |
 | Base.AssaultRifleA3 | MarzGuns.M16A3 | H | Same model, auto/single. |
-| Base.AssaultRifleM4 | MarzGuns.M4A1 | H | M4 -> M4A1; GoM adds Burst mode and an integrated collapsible stock (M4A1_Integrated_Stock_*; set modData.StockFolded=false to match MVG's always-extended look, or leave nil for GoM default folded). Bayonet not mountable on GoM M4A1 -> return knife. |
-| Base.AssaultRifleAK47 | MarzGuns.AK47 | H | Same model, 7.62x39, 30/75 mags. Ammo must be converted (Base.762Bullets -> SWMG.762x39_Bullet). Bayonet not mountable on GoM AK47 -> return knife. |
+| Base.AssaultRifleM4 | MarzGuns.M4A1 | H | M4 -> M4A1; GoM adds Burst mode and an integrated collapsible stock (M4A1_Integrated_Stock_*). `StockFolded` is left nil, so the stock takes GoM's default (folded). Bayonet not mountable on GoM M4A1 -> loose `M9_BAYONET` knife. |
+| Base.AssaultRifleAK47 | MarzGuns.AK47 | H | Same model, 7.62x39, 30/75 mags. Ammo must be converted (Base.762Bullets -> SWMG.762x39_Bullet). Bayonet not mountable on GoM AK47 -> loose `M9_BAYONET` knife. |
 | Base.AssaultRifle2 (M14) | MarzGuns.M14 | H | Same model, 20-rd; bayonet OK. |
-| Base.SR25_Rifle | MarzGuns.M14 | L / FLAG | No SR-25/AR-10 in GoM. M14 = semi-auto 7.62x51 DMR-ish with 20-rd mag and Picatinny rails; family 7.62x51mm accepts Base.308Bullets. Alternatives: PSG1 (semi DMR, but 5-rd mags = capacity loss), G3/FAL (20-rd). |
+| Base.SR25_Rifle | MarzGuns.PSG1 | **Closest stats** | No SR-25 in GoM. PSG1 is clearly nearest (1.44; M14 1.97, FAL 2.01): semi-auto 7.62x51, damage 1.2-2.0 vs 1.0-1.8, recoil 20 = 20, weight 4.5 = 4.5, aim 50 vs 45. Capacity 20 -> 5: the gun keeps 5 rounds in a `762x51Magazine5_PSG1`, and the surplus stays in a loose M14 magazine (see C.2). |
 | Base.Shotgun (JS-2000) | MarzGuns.MOSSBERG_590 | M | Fictional pump; GoM author maps to 590 or 870; both MaxAmmo 5. Pump -> Pump_Lock. Alternative REMINGTON_870. |
-| Base.ShotgunSawnoff | MarzGuns.MOSSBERG_590 | L / FLAG | No sawn-off pump in GoM (break-action guns are the only sawn variants). Capacity 5=5; sawn-off handling stats lost. |
+| Base.ShotgunSawnoff | MarzGuns.REMINGTON_870 | **Closest stats** | No sawn-off pump in GoM (break-action guns are the only sawn variants). REMINGTON_870 and TRENCHGUN tie at 1.71 (MOSSBERG_590 1.73); the 870 is chosen as the plainer civilian pump. 5 shells = 5. |
 | Base.JS3T_Shotgun | MarzGuns.SPAS12 | M | Author's mapping; 7=7; JS3T is a pump (RackAfterShoot) so attach `SPAS12_Selector_Pump` + Bolt_Lock + Pump_Lock + SPAS12_Integrated_Stock_Folded (all required parts). Alternative BENELLI_M4 (7, semi). |
 | Base.VarmintRifle (MSR700, 5.56) | MarzGuns.MODEL_70 | M | .223 bolt rifle, 5 rds; 5.56x45mm family includes Base.556Bullets. |
 | Base.HuntingRifle (MSR788, .308) | MarzGuns.REMINGTON_700 | H/M | Author's mapping; .308 bolt; 4 -> 5 capacity (no loss). |
@@ -609,8 +615,8 @@ are handed back as items.
 | Base.L92_Carbine (.357, 10) | MarzGuns.W1873 | M | .357 lever; GoM capacity 9 -> if 10 loaded, return 1 round (the first-loaded/bottom AmmoList[1]). Alternative W1873_CARBINE (6). |
 | Base.L94_Rifle (.30-30, 6) | MarzGuns.W1894 | H | Winchester 1894 .30-30, 6=6. (Author's other option M1895 is .45-70 - wrong caliber.) |
 | Base.TrapperCarbine (.45) | MarzGuns.CAMP_CARBINE | H | Author's mapping; .45 carbine using M1911 7-rd mags. No optic/laser mounts in GoM -> return those attachments. |
-| Base.JS5_smg | MarzGuns.MP5 | L / FLAG | Fictional 9mm 30-rd folding-stock SMG (never distributed by MVG). MP5 has integrated folding stock, 30-rd mag; Burst mode lost. |
-| Base.MP5_SMG | MarzGuns.MP5 | H | Same model; GoM MP5 has no Burst (Auto/Single) and adds integrated folding stock (set StockFolded=false to keep look). |
+| Base.JS5_smg | MarzGuns.MP5 | **Closest stats** | Fictional 9mm SMG. MP5 is clearly nearest (0.47; MP5A2 0.65): identical damage 1.0-1.6, hit 50, aim 40, recoil 15, range 30, 30 rounds. Burst is lost (GoM MP5 is Auto/Single). The JS5 stock position is kept: `StockFolded` follows the `JS5_Stock_*` part, and `MP5_Integrated_Stock_*` is restored to match. |
+| Base.MP5_SMG | MarzGuns.MP5 | H | Same model; GoM MP5 has no Burst (Auto/Single; a Burst gun keeps GoM's default mode) and adds an integrated folding stock, left at GoM's default (folded). |
 | Base.MP5SD_SMG | MarzGuns.MP5SD | H | Same; same notes. |
 | Base.DoubleBarrelShotgun | MarzGuns.DOUBLEBARREL (+DOUBLEBARREL_Barrel_Close) | H | Same class; 2 shells. |
 | Base.DoubleBarrelShotgunSawnoff | MarzGuns.DOUBLEBARREL (+DOUBLEBARREL_Barrel_Sawnoff_Close) | H | GoM represents sawn-off as a barrel part with the same sawn stats (AimingTime 30, HitChance 70, spread 2.0, +MaxRange 15). |
@@ -622,24 +628,24 @@ are handed back as items.
 
 The pool is built at runtime from `Map.RerollCandidates` (`Convert.rerollPool`).
 
-Note on vanilla-ID weapons: Base.Pistol, Pistol2, Pistol3, AssaultRifle, AssaultRifle2, Shotgun, ShotgunSawnoff, VarmintRifle, HuntingRifle, MSR7T_Rifle, JS3T_Shotgun, JS14_Rifle, L92_Carbine, L94_Rifle, TrapperCarbine, DoubleBarrelShotgun(+Sawnoff) keep existing after MVG removal as plain vanilla guns. Converting them is the user's choice; if you do NOT convert them you must still strip MVG-only parts (OpenBolt/CloseBolt, MVG mags as Clip parts, silencers/muzzles) and clear Gunworks modData, otherwise they load with unknown parts.
+Note on vanilla-ID weapons: Base.Pistol, Pistol2, Pistol3, AssaultRifle, AssaultRifle2, Shotgun, ShotgunSawnoff, VarmintRifle, HuntingRifle, MSR7T_Rifle, JS3T_Shotgun, JS14_Rifle, L92_Carbine, L94_Rifle, TrapperCarbine, DoubleBarrelShotgun(+Sawnoff) would keep existing after MVG removal as plain vanilla guns, but with MVG-only parts and Gunworks modData. VWP2GoM always converts them, and keeps converting any that appear later (crafted, dropped, or new loot that GoM's own replacement does not take).
 
 ### C.2 Magazines (loose items; when mounted/inserted see "host-dependent" rule)
 
 | MVG | GoM | Conf | Reasoning |
 |---|---|---|---|
-| Base.9mmClip (15) | MarzGuns.9x19Magazine15_M92FS | H | Author's mapping; same capacity. Host-dependent: inside a Pistolm93r -> MarzGuns.9x19Magazine18_M93R (18 >= 15). |
+| Base.9mmClip (15) | MarzGuns.9x19Magazine15_M92FS | H | Author's mapping; same capacity. Host-dependent: inside a Pistolm93r the M93R's profile does not list it, so the gun gets the largest M93R magazine (`9x19Magazine60_M93R`) and an empty `9x19Magazine15_M92FS` is handed back. |
 | Base.44Clip (8, .44) | MarzGuns.50Magazine8_DEAGLE, **emptied** | Function | Pistol3 now becomes the SW629 revolver, which takes no magazine. The functional equivalent is GoM's 8-round heavy-pistol magazine. It holds .50 AE, so every loaded .44 round is taken out first and kept as `SWMG.44_Bullet`. |
 | Base.45Clip (7) | MarzGuns.45Magazine7_M1911 | H | Also the CAMP_CARBINE mag. |
 | Base.M14Clip (20) | MarzGuns.762x51Magazine20_M14 | H | |
-| Base.JS14_Clip (20) | MarzGuns.223Magazine20_Mini14 | H/M | Same capacity, 5.56x45mm family. |
-| Base.JS14_Clip_30 | MarzGuns.223Magazine30_Mini14 | H/M | |
+| Base.JS14_Clip (20) | MarzGuns.223Magazine20_Mini14 | H/M | Same capacity, 5.56x45mm family. Host-dependent: inside an AC556 (now M16A3) the STANAG profile does not list it, so the gun gets the largest STANAG (`556x45Magazine150_STANAG`) and the Mini-14 magazine is handed back holding any surplus. |
+| Base.JS14_Clip_30 | MarzGuns.223Magazine30_Mini14 | H/M | Same host-dependent rule as `JS14_Clip`. |
 | Base.JS5_Clip (30) | MarzGuns.9x19Magazine30_MP5 | M | Follows JS5 -> MP5. |
 | Base.556Clip_20 | MarzGuns.556x45Magazine20_STANAG | H | |
 | Base.556Clip (30) | MarzGuns.556x45Magazine30_STANAG | H | |
 | Base.556Clip_75 | MarzGuns.556x45Magazine75_STANAG | H | |
-| Base.308Clip_10 | MarzGuns.762x51Magazine20_M14 | M | Follows SR25 -> M14; capacity up, no loss. (If you pick PSG1 instead you'd lose 5 rounds per mag.) |
-| Base.308Clip_20 | MarzGuns.762x51Magazine20_M14 | M | Two MVG types collapse into one GoM type (fine; not reversible). |
+| Base.308Clip_10 | MarzGuns.762x51Magazine20_M14 | M | Loose magazine: capacity rises, no loss. Inside a converted SR25 (now PSG1) the host-dependent rule applies: the gun gets a `762x51Magazine5_PSG1` holding at most 5 rounds, and an M14 magazine holding the surplus is handed back. |
+| Base.308Clip_20 | MarzGuns.762x51Magazine20_M14 | M | Same as `308Clip_10`. Two MVG types collapse into one GoM type (not reversible). |
 | Base.762Clip_30 | MarzGuns.762x39Magazine30 | H | |
 | Base.762Clip_75 | MarzGuns.762x39Magazine75 | H | |
 | Base.9mmClip_25 | MarzGuns.9x19Magazine25_MP5 | H | |
@@ -647,7 +653,13 @@ Note on vanilla-ID weapons: Base.Pistol, Pistol2, Pistol3, AssaultRifle, Assault
 | Base.9mmClip_40 | MarzGuns.9x19Magazine60_MP5 | M | No 40; next larger in same profile, no loss. |
 | Base.9mmClip_100 | MarzGuns.9x19Magazine100_MP5 | H | |
 
-Host-dependent rule for a gun's inserted magazine: use the mapped type if the target gun accepts it. Otherwise use the largest magazine in the target's profile; if it holds fewer rounds than are loaded, the surplus rounds stay in a second, loose magazine of the mapped type (or loose rounds when the magazine is not an MVG item). Nothing is discarded.
+Host-dependent rule for a gun's inserted magazine (`chooseMagazine` / `loadWeapon`):
+
+- **The target accepts the mapped type** (it is in the gun's Gunworks magazine profile, or the gun has no profile and the mapped type is its script `MagazineType`): the gun uses it. Rounds beyond its capacity come out loose.
+- **Otherwise** the gun uses the largest magazine in its profile (or its script `MagazineType` when it has no profile). A loose magazine of the mapped type is **always** handed back beside it, holding whatever did not fit, which may be nothing.
+- **The target takes no magazine** (tube, revolver, break action): the mapped magazine is handed back empty and the rounds go into the gun up to its capacity, the rest loose.
+
+Nothing is discarded.
 
 ### C.3 Ammo: rounds, boxes and cartons
 
@@ -707,10 +719,11 @@ Notes:
   Repacking gives exactly the same number of rounds.
 - **Rounds inside guns and magazines are converted too.** Remap every entry of `AmmoList` and
   `SpentAmmoList` with the round rows above.
-- **Player ammo preferences:** remap the bullet types inside `GunworksAmmoPref` on each player
-  the same way.
-- **Stack state:** ammo items carry little state. Copy favourite, custom name and modData anyway,
-  and keep the item in the same container, hotbar slot or floor position.
+- **Player ammo preferences** (`GunworksAmmoPref`) are not touched. Entries that are no longer
+  in a registry are ignored (D.1).
+- **Stack state:** ammo items carry little state. Favourite and custom name are copied (and
+  modData for rounds), and the item stays in the same container or floor position. A .44 repack
+  puts the extra boxes and rounds beside the first one.
 - **Hot Brass casings** (`HBVCEF.*_Casing`, including `762x39_Casing`) belong to Hot Brass, not
   MarzVanillaGuns, so they stay as they are.
 - **Hot Brass Ammo Crafting** has `*_VWP` recipes that make and disassemble `Base.762Bullets`.
@@ -718,10 +731,9 @@ Notes:
 - `MarzGuns.*_Bullet` round scripts are orphans; never convert to them.
 - `Base.223Bullets` is registered by MarzVanillaGuns but never defined, so nothing exists to
   convert.
-- **Open question:** vanilla weapons MarzVanillaGuns never touched (`Base.Revolver`,
-  `Revolver_Long`, `Revolver_Short`) use `.38`/`.357`/`.44` ammo. GoM's `patchAllItemsAmmo`
-  registers every item with an ammo type into GoM's ammo families, so those revolvers should
-  accept `SWMG` rounds through the framework. Check this in game before relying on it.
+- **Vanilla revolvers** (`Base.Revolver`, `Revolver_Long`, `Revolver_Short`), which
+  MarzVanillaGuns never touched, are rerolled to GoM revolvers (C.1), so whether they would accept
+  `SWMG` rounds no longer matters.
 ### C.4 Attachments: matched by function
 
 **Rule:** every attachment becomes the GoM part that does the same job. The job is read from the
@@ -731,8 +743,10 @@ stats each part changes (script modifiers plus `AttachmentCustomStats.lua` in bo
    (`AttachmentsRequiredParts.lua`, e.g. `Picatinny_Rail_Up` for rifle optics).
 2. If the gun does not accept the first choice, try the next part in the same function list
    that it does accept.
-3. If the gun accepts nothing in that function, the first choice goes into the same container as a
-   loose item.
+3. If the gun accepts nothing in that function, the part's `loose` item goes into the same
+   container as a loose item. Parts with a `looseLongGun` item (`Laser`, `GunLight`,
+   `AmmoStraps`) use that instead when they came off a gun that is not a handgun. Attachments
+   found loose, not on a gun, always use `loose`.
 
 Vanilla-ID attachments (`x2Scope`, `Laser`, and so on) are converted too, loose or mounted, so
 nothing from the old set remains.
@@ -748,8 +762,8 @@ sight range of 16 is ×1.6.
 | `x8Scope` | sight range 22 (×2.2), aim +20 (×1.44) | High-power scope | `LRX12X_Scope` (×2.0, ×1.5), then `LR10X_Scope`, `TR06X_Scope` | `LRX12X_Scope` |
 | `RedDot` | aim −10 (×0.78), no magnification | Fast-aim reflex sight | Rifles: `ReflexS2_Sight` (aim ×0.9), then `Kobra_Sight`, `OKP3_Sight`. Pistols: `PS1_Sight` | `ReflexS2_Sight` |
 | `TritiumSights` | aim −3, pistol sight | Pistol sight | `PL4_Sight` (+ `Beretta_Mount` / `Colt_Mount` / `Heavy_Pistol_Rail`), then `PS1_Sight` | `PL4_Sight` |
-| `Laser` | aim −10, hit +5 | Aiming laser | Pistols: `PX1_Laser`. Rifles/SMGs: `LRX-7_Laser` (aim ×0.9, hit ×1.03) + `Picatinny_Rail_Right`, then `AimRight_Laser` | Pistol: `PX1_Laser`; long gun: `LRX-7_Laser` |
-| `GunLight` | flashlight, aim +5 | Weapon light | Pistols: `TL_Light`, then `LP_Light`. Rifles/SMGs: `SR7_Light` + `Picatinny_Rail_Left`, then `BrightPoint-5_Light`. Battery charge and on/off state are copied | Pistol: `TL_Light`; long gun: `SR7_Light` |
+| `Laser` | aim −10, hit +5 | Aiming laser | Pistols: `PX1_Laser`. Rifles/SMGs: `LRX-7_Laser` (aim ×0.9, hit ×1.03) + `Picatinny_Rail_Right`, then `AimRight_Laser` | Off a long gun: `LRX-7_Laser`; otherwise `PX1_Laser` |
+| `GunLight` | flashlight, aim +5 | Weapon light | Pistols: `TL_Light`, then `LP_Light`. Rifles/SMGs: `SR7_Light` + `Picatinny_Rail_Left`, then `BrightPoint-5_Light`. Battery charge and on/off state are copied | Off a long gun: `SR7_Light`; otherwise `TL_Light` |
 | `Pistol_Silencer` | sound ×0.3, damage ×0.9 | Pistol suppressor | 9mm pistols: `Shh9_Suppressor` + `Pistol_Muzzle_Mount_Device`. .45 pistols: `P45_Suppressor` + `45_Muzzle_Mount_Device` | `Shh9_Suppressor` |
 | `Heavy_Pistol_Silencer` | sound ×0.3, damage ×0.9, heavy pistol | Heavy pistol suppressor | `P45_Suppressor` + `45_Muzzle_Mount_Device` when the gun accepts it. The SW629 (Pistol3's target) accepts no suppressor | `P45_Suppressor` |
 | `AR_Silencer` | sound ×0.3, damage ×0.9 | Rifle suppressor | AR family and MINI_14: `MKI_Suppressor` + `AR_Muzzle_Mount_Device`, then `NDR_Suppressor`. AK47: `PBS-1_Suppressor` + `AK_Muzzle_Mount_Device` | `MKI_Suppressor` |
@@ -758,8 +772,8 @@ sight range of 16 is ×1.6.
 | `ChokeTubeFull` | spread −0.4, range +2 | Tightens the shot pattern for range | No GoM part changes spread or range on a shotgun. The nearest job is a muzzle device that improves accuracy: `LR2_Compensator`. It mounts only on the AR family, never on a shotgun | `LR2_Compensator` |
 | `ChokeTubeImproved` | spread −0.2, range +1 | Milder pattern tightening | Same as above, one step down: `LX_Flashhider` | `LX_Flashhider` |
 | `RecoilPad` | recoil delay −2 | Recoil reduction | `Shellholder` (recoil delay ×0.6, the only GoM part that reduces recoil) on DOUBLEBARREL / STEVENS_555 / TOZ34, then `Stub_Foregrip` + `Picatinny_Rail_Down` (recoil control on M14 / PSG1 / AR family) | `Shellholder` |
-| `AmmoStraps` | reload −5, ammo carried on the gun | Ammo carrier / sling | DOUBLEBARREL: `Shellholder`. REMINGTON_700: `Rem700_Sling`. MODEL_70: `Model_70_Sling` | Shotguns: `Shellholder`; rifles: `Rem700_Sling` |
-| `M9_Bayonet_Attachment` | bayonet | Bayonet | `M9_Bayonet_Attachment` on M16A2 / M16A3 / M14 / MOSSBERG_590 / REMINGTON_870. Condition copied; `GW_BayonetDeployed` kept | `M9_BAYONET` knife, condition copied, `GW_BayonetDeployed = false` |
+| `AmmoStraps` | reload −5, ammo carried on the gun | Ammo carrier / sling | DOUBLEBARREL: `Shellholder`. REMINGTON_700: `Rem700_Sling`. MODEL_70: `Model_70_Sling` | Off any long gun, pump shotguns included: `Rem700_Sling`; found loose: `Shellholder` |
+| `M9_Bayonet_Attachment` | bayonet | Bayonet | `M9_Bayonet_Attachment` on M16A2 / M16A3 / M14 / MOSSBERG_590 / REMINGTON_870. Condition copied; `GW_BayonetDeployed` kept (true unless it was false) | `M9_BAYONET` knife, condition copied, `GW_BayonetDeployed` cleared on the knife |
 
 Conflicts: a gun holds one part per PartType. If two MVG parts map to the same GoM PartType (for
 example `AmmoStraps` and `RecoilPad` both becoming `Shellholder` on a DOUBLEBARREL), the one that
@@ -773,13 +787,13 @@ little weight; nothing is taken away.
 | MVG | GoM | Conf | State represented / GoM representation |
 |---|---|---|---|
 | Base.M9_Bayonet | MarzGuns.M9_BAYONET | H | Real knife; copy condition, sharpness, blood, favourite, name. |
-| Base.Attack_Bayonet | MarzGuns.Attack_Bayonet | H (internal) | Transient spear substitute swapped into hands during a bayonet stab; cached in weapon modData GW_CachedBayonetSpear. Should never persist in inventory; if found (crash mid-attack) convert or delete. |
+| Base.Attack_Bayonet | MarzGuns.Attack_Bayonet | H (internal) | Transient spear substitute swapped into hands during a bayonet stab; cached in weapon modData GW_CachedBayonetSpear. Should never persist in inventory; if found (crash mid-attack) it is converted like a knife. |
 | Base.GenericFakeItem | MarzGuns.FakeItem | internal | Dummy MountOn target for internal parts; never expected in inventories. |
-| Base.CloseBolt (MovingBolt) | target's "locked" part: Slide_Lock (pistols), Bolt_Lock (rifles/SMGs/bolt guns/CAMP_CARBINE/MINI_14/SPAS12), Pump_Lock (MOSSBERG_590, SPAS12), Lever_Lock (W1873/W1894) | internal | Action closed / in battery. GoM uses distinct PartTypes Slide/Bolt/Pump/Lever instead of MovingBolt. Remove MVG part; attach target's locked part (GoM required list). |
-| Base.OpenBolt (MovingBolt) | target's "open" part: Slide_Fired, Bolt_Fired, Pump_Fired, Lever_Fired | internal | Action open (empty & locked back, or mid-cycle). Safe choice: attach "locked" and let Animations re-evaluate on next shot/rack; or attach *_Fired if !roundChambered && haveChamber && count==0. |
+| Base.CloseBolt (MovingBolt) | target's "locked" part: Slide_Lock (pistols), Bolt_Lock (rifles/SMGs/bolt guns/CAMP_CARBINE/MINI_14/SPAS12), Pump_Lock (MOSSBERG_590, SPAS12), Lever_Lock (W1873/W1894) | internal | Action closed / in battery. GoM uses distinct PartTypes Slide/Bolt/Pump/Lever instead of MovingBolt. The MVG part is dropped (internal PartType) and the target's required parts are mounted, `_Lock` variants. Found loose: `MarzGuns.Bolt_Lock`. |
+| Base.OpenBolt (MovingBolt) | target's "open" part: Slide_Fired, Bolt_Fired, Pump_Fired, Lever_Fired | internal | Action open. When a gun has `OpenBolt`, every required `_Lock` part except selectors is mounted as its `_Fired` variant where one exists. Found loose: `MarzGuns.Bolt_Lock`. |
 | Base.JS5_Stock_Folded / Deployed (StockIntegrated) | MarzGuns.MP5_Integrated_Stock_Folded / _Deployed | internal | Visual of FoldingStock state; the truth is modData.StockFolded. GoM uses the same framework: copy StockFolded and attach matching part (FoldingStock.RestoreFoldedStockState does it on load/equip). |
 | Base.Side_By_Side_Barrel_Close | MarzGuns.DOUBLEBARREL_Barrel_Close | internal/H | Normal-length barrels, action closed. |
-| Base.Side_By_Side_Barrel_Open | MarzGuns.DOUBLEBARREL_Barrel_Open | internal/H | Action open (breech broken). Recommend normalizing to _Close (MVG itself converts _Open->_Close on install). |
+| Base.Side_By_Side_Barrel_Open | MarzGuns.DOUBLEBARREL_Barrel_Open | internal/H | Action open (breech broken). On a gun it is normalised to `DOUBLEBARREL_Barrel_Close` (`Map.Barrels`, as MVG itself converts _Open->_Close on install); found loose it keeps `_Open`. Same for the sawn-off pair. |
 | Base.Side_By_Side_Barrel_Sawnoff_Close | MarzGuns.DOUBLEBARREL_Barrel_Sawnoff_Close | internal/H | Sawn-off barrels (persistent gun configuration, carries stats) - closed. |
 | Base.Side_By_Side_Barrel_Sawnoff_Open | MarzGuns.DOUBLEBARREL_Barrel_Sawnoff_Open | internal/H | Sawn-off, open. |
 | MVG magazines mounted as Clip part | GoM magazine type (C.2) mounted as Clip part | internal | Visual of the inserted magazine; truth = weapon.containsClip + weapon.magazineType + modData.MagazineType + currentAmmoCount + AmmoList. Both mods use Clip PartType and framework Magazine.manageMagazineAttachment. |
@@ -790,24 +804,31 @@ little weight; nothing is taken away.
 
 ### D.1 modData keys (grep of getModData/modData across SWMG framework, MVG, GoM, Hot Brass)
 
-| Key | On | Written by | Shape / meaning | Mod-specific values? | Migration action |
+VWP2GoM copies every modData key to the new item except those in `Map.TransientModData`
+(`AmmoList`, `SpentAmmoList`, `MagazineType`, `MagazineTypeLastIndex`, `ActiveAmmoProfile`,
+`GW_CachedBayonetSpear`, `GW_BayonetOriginalWeapon`, `GW_BayonetDeployed`,
+`GWG_FiringExplosiveAmmo`, `shortRackAfterInsert`, `Gunworks_SpawnerItemType`, `StockFolded`,
+`VWP2GoM`), which it rebuilds or drops as the last column says. A copy of the original modData is
+kept in `modData.VWP2GoM.original`.
+
+| Key | On | Written by | Shape / meaning | Mod-specific values? | What VWP2GoM does |
 |---|---|---|---|---|---|
-| AmmoList | weapon, magazine, speedloader | Framework CustomSystemHooks (ISLoadBulletsInMagazine animEvent append; ISInsertMagazine.loadAmmo mag->gun copy (+ keeps chambered round as last); ISEjectMagazine via Ammo.SplitAmmoListOnEject; ISReloadWeaponAction.loadAmmo append (inserted *before* the chambered round); ISUnloadBulletsFromFirearm removes index #-1; ISRackFirearm.removeBullet pops last; attack hook pops last and calls Ammo.AmmoProfileSetter(last)); SpeedLoader.TransferAmmoToGun; Server.lua/Client.lua sync; GoM OnCreate & GiveRandomMagAmmo (fills with ammoType itemKey); HB Tactical Reload (split on eject); HB TimedActionsHooks (pop on rack). MVG OnCreate never writes it. | Lua array (1..n) of bullet item fullType strings, one per round. **Last element = next round to fire** (chambered round on a gun / top round in a mag). On a gun with a chamber: #AmmoList == currentAmmoCount + (roundChambered ? 1 : 0) when fully tracked; may be shorter or nil for rounds that entered untracked (MVG OnCreate, vanilla code) -> framework then falls back to weapon ammoType. nil when empty. | YES - values are item types. MVG AK/mags contain `Base.762Bullets` -> translate to `SWMG.762x39_Bullet`. Vanilla types (Base.Bullets9mm, 556Bullets, 308Bullets, Bullets45, ShotgunShells, Bullets357/38, 3030Bullets) remain valid in GoM families. Base.Bullets44 in a gun/mag mapped to DEAGLE -> not valid, return rounds. | Copy with translation; pad missing entries at the *front* (index 1..) with the weapon's current ammo item key (translated) so length matches count; truncate from the front (returning rounds) if target capacity smaller. |
+| AmmoList | weapon, magazine, speedloader | Framework CustomSystemHooks (ISLoadBulletsInMagazine animEvent append; ISInsertMagazine.loadAmmo mag->gun copy (+ keeps chambered round as last); ISEjectMagazine via Ammo.SplitAmmoListOnEject; ISReloadWeaponAction.loadAmmo append (inserted *before* the chambered round); ISUnloadBulletsFromFirearm removes index #-1; ISRackFirearm.removeBullet pops last; attack hook pops last and calls Ammo.AmmoProfileSetter(last)); SpeedLoader.TransferAmmoToGun; Server.lua/Client.lua sync; GoM OnCreate & GiveRandomMagAmmo (fills with ammoType itemKey); HB Tactical Reload (split on eject); HB TimedActionsHooks (pop on rack). MVG OnCreate never writes it. | Lua array (1..n) of bullet item fullType strings, one per round. **Last element = next round to fire** (chambered round on a gun / top round in a mag). On a gun with a chamber: #AmmoList == currentAmmoCount + (roundChambered ? 1 : 0) when fully tracked; may be shorter or nil for rounds that entered untracked (MVG OnCreate, vanilla code) -> framework then falls back to weapon ammoType. nil when empty. | YES - values are item types. MVG AK/mags contain `Base.762Bullets` -> translate to `SWMG.762x39_Bullet`. Vanilla types (Base.Bullets9mm, 556Bullets, 308Bullets, Bullets45, ShotgunShells, Bullets357/38, 3030Bullets) remain valid in GoM families. Base.Bullets44 in a gun/mag mapped to DEAGLE -> not valid, return rounds. | Rebuilt: every entry translated through `Map.Rounds` (vanilla types too); padded at the *front* with the gun's translated ammo type, or trimmed from the front, so the length matches count (+1 if chambered); wrong-caliber rounds and rounds beyond the target's capacity (taken from the bottom) come out as loose rounds. |
 | SpentAmmoList | weapon (ManuallyRemoveSpentRounds guns: double barrels, revolvers) | Hot Brass TimedActionsHooks attack hook + server `appendSpent`; cleared by ejectSpentRounds | Array of bullet item fullTypes for spent casings still in the gun (used to pick casing type when ejected). | YES (item types; shotguns -> Base.ShotgunShells which is fine) | Copy (translate 762 if ever present); pairs with Java spentRoundCount. |
 | MagazineType | weapon | Framework Magazine.SaveMagazineType (on insert), ClearMagazineType (on eject); MVG & GoM OnCreate | String fullType of the currently inserted magazine. Needed because Java magazineType is re-applied from this on load/equip (Magazine.RestoreMagazineType -> setMagazineType + setMaxAmmo(mag MaxAmmo)). Read by ReloadAnim/Visuals and ISEjectMagazine to decide what item pops out. | YES (MVG mag types) | Translate via C.2 host-dependent rule; nil if no clip. |
-| MagazineTypeLastIndex | weapon | Magazine.getBestMagazineFromList / SaveMagazineType | Integer index into the weapon's magazine-profile list (round-robin reload preference). | Profile-specific (index meaning changes) | Recompute from new MagazineType in new profile, or nil. |
+| MagazineTypeLastIndex | weapon | Magazine.getBestMagazineFromList / SaveMagazineType | Integer index into the weapon's magazine-profile list (round-robin reload preference). | Profile-specific (index meaning changes) | Dropped (nil). |
 | ActiveAmmoProfile | weapon | Ammo.AmmoAdjustWeaponStats (on fire/rack) | String ammo stat profile name (e.g. "9x19mmAmmo", "38SpecialAmmo", "762x39mmAmmo"). Drives StatsFactory "Ammo" layer. Cleared for inventory weapons by Ammo.RestoreOnLoad on player create. | Family/profile names; MVG only knew 357MagnumAmmo/38SpecialAmmo (same names exist in GoM) | Set nil (it is rebuilt on the next shot). |
 | GW_BayonetDeployed | weapon | MVG & GoM OnCreate, Bayonet.AttachBayonet/RemoveBayonet/Toggle, Server.lua sync, ISToggleIntegratedBayonet | Boolean: bayonet attached (attachable) or deployed (integrated). Melee attack becomes bayonet stab when true. | Generic | Keep true only if the bayonet part is re-attached on the target; else false/nil. |
 | GW_CachedBayonetSpear | weapon | Bayonet.BayonetAttack | InventoryItem object (spear substitute) cached at runtime; not meaningful across save. | Object ref | Set nil. |
 | GW_BayonetOriginalWeapon | temp spear item | Bayonet.BayonetAttack | Object ref back to the gun (transient). | - | Ignore / nil. |
-| StockFolded | weapon | FoldingStock (toggle/set/restore), Server.lua sync | Boolean folded state; nil -> initialState on restore (folded for all MVG/GoM entries). Visual part swapped to match. | Generic | Copy for JS5 -> MP5; for MP5/MP5SD/M4A1 targets choose false (deployed) or nil. |
-| BipodDeployed | weapon | FoldingBipod, Server.lua sync | Boolean; nil -> initialState (folded). | Generic | Not in MVG; nil for M24 target. |
+| StockFolded | weapon | FoldingStock (toggle/set/restore), Server.lua sync | Boolean folded state; nil -> initialState on restore (folded for all MVG/GoM entries). Visual part swapped to match. | Generic | Taken from the source's `StockFolded`, overridden by a `JS5_Stock_*` part if present; otherwise nil, so GoM's default (folded) applies to MP5/MP5SD/M4A1. |
+| BipodDeployed | weapon | FoldingBipod, Server.lua sync | Boolean; nil -> initialState (folded). | Generic | Copied when the source has it (MVG never sets it, so nil in practice). |
 | GW_RpmStage | weapon | RateOfFire.SetRpmStageIndex | Integer index into a multi-stage rpm table (GoM BAR only). | Generic | Not in MVG; nil. |
 | GWG_FiringExplosiveAmmo | weapon | CustomSystemHooks attack hook; cleared by ExplosivesSystems client | Bullet type string of explosive round being fired (transient). | Item type | nil. |
 | shortRackAfterInsert | weapon | ReloadAnim/Timing, consumed by ReloadAnimHooks | Transient bool. | Generic | nil. |
 | GW_UBMode, GW_UBWeaponType, GW_UBAttachment, GW_UBModel ("host"/"self"), GW_UBHostSprite, GW_UBHostType, GW_UBHostSnapshot, GW_UBSelfSnapshot | weapon (and GW_UBHostSnapshot on player modData) | Framework Underbarrel (GoM M16A2_M203 only) | Snapshot tables: {type, condition, conditionMax, haveBeenRepaired, weaponSprite, customName, ammo={currentAmmoCount, roundChambered, spentRoundChambered, spentRoundCount, jammed, containsClip, magazineType, maxAmmo, ammoType(itemKey), fireMode, ammoList}, parts=[{type, partType, condition, modData}], modData, preservers}. | YES (item types) but never produced by MVG | Not present in MVG saves; nothing to migrate. Useful as a template of "full weapon state" to copy. |
 | customName | weapon modData (Underbarrel only) | Underbarrel snapshot | name when isCustomName | - | Use item:getName()/setName/setCustomName instead. |
-| roundsNoJam | weapon | Old HBVCEF VFE override (`media/lua/client/HBVCEF_Overrites_VFE.lua`, legacy) | Integer shots-without-jam counter | Generic | Copy or ignore. |
+| roundsNoJam | weapon | Old HBVCEF VFE override (`media/lua/client/HBVCEF_Overrites_VFE.lua`, legacy) | Integer shots-without-jam counter | Generic | Copied. |
 | GunworksAmmoPref | **player** modData | Ammo.SetReloadPreferenceForFamily | {familyName -> ordered array of bullet fullTypes} reload preference. | Contains bullet types; MVG only had family ".38 .357" with vanilla types (still valid in GoM). | No change needed (entries not in registry are ignored). |
 | Gunworks_SpawnerItemType | GoM spawner items | ItemSpawnCore | Selected fullType for a spawner. | GoM only | n/a |
 | MarzGuns_ZombieAttachmentsSynced | zombie modData | GoM ZombieAttachmentHooks | bool | GoM only | n/a |
@@ -823,6 +844,24 @@ No other keys: StatsFactory keeps base stats from the script (not modData); Anim
 - **Values containing full types that need remapping**: AmmoList entries (Base.762Bullets -> SWMG.762x39_Bullet; .44 into DEAGLE -> return), SpentAmmoList entries, modData.MagazineType (all MVG mag types), Java `magazineType` (set from mapped mag), Java `ammoType` (set target default enum or the enum of the last AmmoList entry via Ammo.GetEnumForBullet), part lists (every mounted part type), GW_UB* snapshots (not present in MVG saves).
 - **MVG AmmoType id** `mvgi:bullets_762` is on MVG AK/762 mags; GoM equivalents use `swmg:bullet_762x39`.
 
-### D.3 Checklist of non-modData state to copy on every converted weapon/part
+### D.3 Non-modData state copied on every converted weapon/part
 
-Weapon: condition, conditionMax-relative ratio if different, haveBeenRepaired, name/customName, favourite, bloodLevel, dirtyness/wetness, currentAmmoCount, roundChambered, spentRoundChambered, spentRoundCount, jammed, containsClip, magazineType, maxAmmo, fireMode (only if in target FireModePossibilities; MVG uses "Single"/"Burst"/"Auto", same strings as GoM), ammoType, attached hotbar slot/`attachedSlot`/`attachedSlotType`/`attachedToModel`, equipped hands, container & world position (IsoWorldInventoryObject xyz offsets, vehicle containers, corpses). Parts: per-part condition (bayonet), GunLight battery (`getCurrentUsesFloat`)/activated. After conversion call StatsFactory.ReapplyAllModifiers(weapon) / let Init.lua restore functions run, and in MP use syncHandWeaponFields + Ammo.SyncAmmoListToClient.
+- **Weapon** (`Convert.weapon`, `captureCommon` / `applyCommon`, `loadWeapon`):
+  - condition, scaled to the target's `ConditionMax` (0 stays 0, full stays full), and
+    `haveBeenRepaired`
+  - custom name, favourite, `bloodLevel`
+  - `currentAmmoCount`, `roundChambered`, `spentRoundChambered`, `spentRoundCount`, `jammed`
+  - `containsClip`, `magazineType`, `maxAmmo`
+  - `fireMode`, only if it is in the target's `FireModePossibilities` (MVG uses
+    "Single"/"Burst"/"Auto", the same strings as GoM)
+  - `attachedSlot`, `attachedSlotType`, `attachedToModel`, `worldZRotation`
+  - equipped hands, attached location, and the container or floor position (restored by the
+    server code)
+- **Not copied:** dirtiness and wetness, and `ammoType`, which comes from the target's script.
+- **Parts** (`copyPartState`): condition (scaled), battery charge (scaled), activated state, and
+  modData. Loose parts also keep favourite and custom name.
+- **Afterwards:** the converter runs `Magazine.RestoreMagazineType`, `Underbarrel.RestoreOnLoad`,
+  the folding stock, bipod and bayonet restores, and `StatsFactory.ReapplyAllModifiers`.
+- **Multiplayer:** the server sends the whole item with `sendReplaceItemInContainer` /
+  `sendAddItemToContainer`, which carries modData, parts and ammo, so `syncHandWeaponFields` and
+  `Ammo.SyncAmmoListToClient` are not used (implementation.md, "Multiplayer").
