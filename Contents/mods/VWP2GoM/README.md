@@ -47,7 +47,8 @@ you have finished, so you can still load your backup if you need to.
 9. After the game has loaded, open `Zomboid/Lua/VWP2GoM.log` and search it for `FAILED` (see
    [The log](#the-log)). Do this before you load the save again, because each load starts a new
    log.
-10. Keep all four mods enabled for this save from now on.
+10. Keep all four mods enabled until everything is converted (see
+    [Removing VWP2GoM](#removing-vwp2gom)).
 
 ## Dedicated server
 
@@ -77,7 +78,8 @@ you have finished, so you can still load your backup if you need to.
    world loads. Players download the new mods automatically when they join.
 7. Open `Zomboid/Lua/VWP2GoM.log` on the server machine and search it for `FAILED`. Do this
    before restarting the server, because each start begins a new log.
-8. Keep all four mods in the server's mod list from now on.
+8. Keep all four mods in the server's mod list until everything is converted (see
+   [Removing VWP2GoM](#removing-vwp2gom)).
 
 The conversion runs only on the server; clients just need the mods installed. If you host from
 the main menu with **HOST** instead of running a dedicated server, follow the same steps. The
@@ -100,6 +102,22 @@ Areas nobody has visited since the switch still hold the old items. VWP2GoM Plac
 Vanilla Weapons Plus-only items being deleted until they are converted. VWP2GoM Placeholders
 requires VWP2GoM, so disabling either mod turns off the placeholders. If you do, those items are
 deleted the next time their area loads, and the vanilla ones are no longer converted.
+
+## Removing VWP2GoM
+
+VWP2GoM can be disabled and removed once everything has been converted:
+
+1. Revisit every area players had visited before the switch, so each one loads with VWP2GoM
+   enabled.
+2. On a server, make sure every player has joined at least once, so their inventory is
+   converted.
+3. Load those areas again and check that `VWP2GoM.log` lists no more conversions.
+4. Disable and remove **VWP2GoM - Vanilla Weapons Plus to Guns of Marz** and **VWP2GoM
+   Placeholders** together. On a server, remove `VWP2GoM` and `VWP2GoM_Placeholders` from
+   `Mods=` and `3803058865` from `WorkshopItems=`.
+
+Any Vanilla Weapons Plus item left in an area nobody revisited is deleted the next time that area
+loads. Vanilla items that turn up later, such as crafted rounds, stay vanilla.
 
 ## What each item becomes
 
@@ -175,8 +193,8 @@ log is normal once your surroundings are converted.
 ## FAQ
 
 **Can I disable VWP2GoM once everything looks converted?**
-Only if nobody will ever load an area that hasn't been visited since the switch. On a save you
-keep playing, leave both VWP2GoM mods enabled.
+Yes, once every area players had visited before the switch has been revisited and every player
+has joined. See [Removing VWP2GoM](#removing-vwp2gom).
 
 **Why are new guns I find random?**
 Guns of Marz has three sandbox options: **Enable Vanilla Weapon Replacement**, **Enable Vanilla
